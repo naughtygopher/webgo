@@ -3,7 +3,7 @@ package webgo
 import (
 	"encoding/json"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -30,7 +30,7 @@ func TestSendError(t *testing.T) {
 		Errors map[string]string
 	}{}
 
-	body, err := ioutil.ReadAll(w.Body)
+	body, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -67,7 +67,7 @@ func TestSendError(t *testing.T) {
 	}{}
 	invalidPayload := make(chan int)
 	SendError(w, invalidPayload, http.StatusBadRequest)
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -103,7 +103,7 @@ func TestSendResponse(t *testing.T) {
 	payload := map[string]string{"hello": "world"}
 
 	SendResponse(w, payload, http.StatusOK)
-	body, err := ioutil.ReadAll(w.Body)
+	body, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -139,7 +139,7 @@ func TestSendResponse(t *testing.T) {
 	// testing invalid response payload
 	w = httptest.NewRecorder()
 	SendResponse(w, make(chan int), http.StatusOK)
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -180,7 +180,7 @@ func TestSend(t *testing.T) {
 	reqBody, _ := json.Marshal(payload)
 
 	Send(w, JSONContentType, string(reqBody), http.StatusOK)
-	body, err := ioutil.ReadAll(w.Body)
+	body, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -228,7 +228,7 @@ func TestRender(t *testing.T) {
 	}
 	Render(w, data, http.StatusOK, tpl)
 
-	body, err := ioutil.ReadAll(w.Body)
+	body, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -253,7 +253,7 @@ func TestRender(t *testing.T) {
 	}
 	Render(w, invaliddata, http.StatusOK, tpl)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -291,7 +291,7 @@ func TestResponsehelpers(t *testing.T) {
 
 	R200(w, want)
 
-	body, err := ioutil.ReadAll(w.Body)
+	body, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -324,7 +324,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Data = ""
 	R201(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -357,7 +357,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Data = ""
 	R204(w)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -382,7 +382,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Data = ""
 	R302(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -416,7 +416,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Errors = ""
 	R400(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -450,7 +450,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Errors = ""
 	R403(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -484,7 +484,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Errors = ""
 	R404(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -518,7 +518,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Errors = ""
 	R406(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -552,7 +552,7 @@ func TestResponsehelpers(t *testing.T) {
 	resp.Errors = ""
 	R451(w, want)
 
-	body, err = ioutil.ReadAll(w.Body)
+	body, err = io.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err.Error())
 		return

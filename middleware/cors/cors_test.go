@@ -11,7 +11,7 @@ package cors
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -43,7 +43,7 @@ func TestCORSEmptyconfig(t *testing.T) {
 	)
 
 	router.ServeHTTP(w, req)
-	body, _ := ioutil.ReadAll(w.Body)
+	body, _ := io.ReadAll(w.Body)
 	str := string(body)
 	if str != "hello" {
 		t.Errorf(
@@ -93,7 +93,7 @@ func TestCORSEmptyconfig(t *testing.T) {
 		nil,
 	)
 	router.ServeHTTP(w, req)
-	body, _ = ioutil.ReadAll(w.Body)
+	body, _ = io.ReadAll(w.Body)
 	str = string(body)
 	if str != "" {
 		t.Errorf(
@@ -161,7 +161,7 @@ func TestCORSWithConfig(t *testing.T) {
 
 	req.Header.Set("Origin", "helloworld.com")
 	router.ServeHTTP(w, req)
-	body, _ := ioutil.ReadAll(w.Body)
+	body, _ := io.ReadAll(w.Body)
 	str := string(body)
 	if str != "" {
 		t.Errorf(

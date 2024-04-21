@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -233,7 +232,7 @@ func successHandler(w http.ResponseWriter, r *http.Request) {
 
 func checkPath(req *http.Request, resp *httptest.ResponseRecorder) error {
 	want := req.URL.EscapedPath()
-	rbody, err := ioutil.ReadAll(resp.Body)
+	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response, '%s'", err.Error())
 	}
@@ -262,7 +261,7 @@ func checkPath(req *http.Request, resp *httptest.ResponseRecorder) error {
 
 func checkPathWildCard(req *http.Request, resp *httptest.ResponseRecorder) error {
 	want := req.URL.EscapedPath()
-	rbody, err := ioutil.ReadAll(resp.Body)
+	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response, '%s'", err.Error())
 	}
@@ -301,7 +300,7 @@ func checkPathWildCard(req *http.Request, resp *httptest.ResponseRecorder) error
 }
 
 func checkParams(req *http.Request, resp *httptest.ResponseRecorder, keys []string, expected []string) error {
-	rbody, err := ioutil.ReadAll(resp.Body)
+	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response, '%s'", err.Error())
 	}
@@ -681,7 +680,7 @@ func TestWildcardMadness(t *testing.T) {
 	respRec := httptest.NewRecorder()
 	router.ServeHTTP(respRec, req)
 
-	rbody, err := ioutil.ReadAll(respRec.Body)
+	rbody, err := io.ReadAll(respRec.Body)
 	if err != nil {
 		t.Error(err)
 	}

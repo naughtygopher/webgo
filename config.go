@@ -2,7 +2,7 @@ package webgo
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"time"
 )
@@ -40,7 +40,7 @@ type Config struct {
 
 // Load config file from the provided filepath and validate
 func (cfg *Config) Load(filepath string) {
-	file, err := ioutil.ReadFile(filepath)
+	file, err := os.ReadFile(filepath)
 	if err != nil {
 		LOGHANDLER.Fatal(err)
 	}
