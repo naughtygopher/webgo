@@ -1,9 +1,11 @@
 package webgo
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -71,7 +73,7 @@ func (lh *logHandler) Warn(data ...interface{}) {
 	lh.warn.Println(data...)
 }
 
-//  Error prints log of severity 2
+// Error prints log of severity 2
 func (lh *logHandler) Error(data ...interface{}) {
 	if lh.err == nil {
 		return
@@ -91,6 +93,14 @@ func (lh *logHandler) Fatal(data ...interface{}) {
 var LOGHANDLER Logger
 
 func init() {
+	var err error
+	jsonErrPayload, err = json.Marshal(errOutput{
+		Errors: ErrInternalServer,
+		Status: http.StatusInternalServerError,
+	})
+	if err != nil {
+		panic(err)
+	}
 	GlobalLoggerConfig(nil, nil)
 }
 

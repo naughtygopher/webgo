@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+var (
+	jsonErrPayload = []byte{}
+)
+
 // ErrorData used to render the error page
 type ErrorData struct {
 	ErrCode        int
@@ -69,14 +73,14 @@ func SendResponse(w http.ResponseWriter, data interface{}, rCode int) {
 	w = crwAsserter(w, rCode)
 	w.Header().Add(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(dOutput{Data: data, Status: rCode})
-	if err != nil {
-		/*
-			In case of encoding error, send "internal server error" and
-			log the actual error.
-		*/
-		R500(w, ErrInternalServer)
-		LOGHANDLER.Error(err)
+	if err == nil {
+		return
 	}
+	// assuming the error was related to JSON encoding, so reattempting to respond
+	// with a static payload. This could still fail in case of network write or other error(s)
+	w = crwAsserter(w, http.StatusInternalServerError)
+	_, _ = w.Write(jsonErrPayload)
+	LOGHANDLER.Error(err)
 }
 
 // SendError is used to respond to any request with an error
@@ -84,14 +88,14 @@ func SendError(w http.ResponseWriter, data interface{}, rCode int) {
 	w = crwAsserter(w, rCode)
 	w.Header().Add(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(errOutput{data, rCode})
-	if err != nil {
-		/*
-			In case of encoding error, send "internal server error" and
-			log the actual error.
-		*/
-		R500(w, ErrInternalServer)
-		LOGHANDLER.Error(err)
+	if err == nil {
+		return
 	}
+	// assuming the error was related to JSON encoding, so reattempting to respond
+	// with a static payload. This could still fail in case of network write or other error(s)
+	w = crwAsserter(w, http.StatusInternalServerError)
+	_, _ = w.Write(jsonErrPayload)
+	LOGHANDLER.Error(err)
 }
 
 // Render is used for rendering templates (HTML)

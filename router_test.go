@@ -87,7 +87,7 @@ func TestRouter_ServeHTTP(t *testing.T) {
 
 		if err != nil && !l.WantErr {
 			t.Errorf(
-				"'%s' (%s '%s') failed with error %w",
+				"'%s' (%s '%s') failed with error %+v",
 				l.Name,
 				l.Method,
 				url,
