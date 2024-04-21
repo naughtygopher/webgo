@@ -3,6 +3,7 @@ package webgo
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,13 +15,21 @@ import (
 // responsewriter used
 type httpResponseWriter interface {
 	http.ResponseWriter
-	http.CloseNotifier //nolint
 	http.Flusher
 	http.Hijacker
 	http.Pusher
 }
 
 func init() {
+	var err error
+	jsonErrPayload, err = json.Marshal(errOutput{
+		Errors: ErrInternalServer,
+		Status: http.StatusInternalServerError,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	// ensure the custom response writer implements all the required functions
 	crw := &customResponseWriter{}
 	_ = httpResponseWriter(crw)
@@ -91,14 +100,6 @@ func (crw *customResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 
 	return nil, nil, errors.New("unable to create hijacker")
-}
-
-// CloseNotify implements the http.CloseNotifier interface
-func (crw *customResponseWriter) CloseNotify() <-chan bool { //nolint
-	if n, ok := crw.ResponseWriter.(http.CloseNotifier); ok { //nolint
-		return n.CloseNotify()
-	}
-	return nil
 }
 
 func (crw *customResponseWriter) Push(target string, opts *http.PushOptions) error {

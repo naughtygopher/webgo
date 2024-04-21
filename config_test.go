@@ -16,7 +16,7 @@ func TestConfig_LoadInvalid(t *testing.T) {
 	cfg := &Config{}
 	cfg.Load("")
 	str := tl.out.String()
-	want := "open : no such file or directoryunexpected end of JSON inputPort number not provided or is invalid (should be between 0 - 65535)"
+	want := "open : no such file or directoryunexpected end of JSON inputport number not provided or is invalid (should be between 0 - 65535)"
 	got := str
 	if got != want {
 		t.Errorf(
