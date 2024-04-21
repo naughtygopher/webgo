@@ -89,8 +89,7 @@ func SendError(w http.ResponseWriter, data interface{}, rCode int) {
 			In case of encoding error, send "internal server error" and
 			log the actual error.
 		*/
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("500 - Internal Server Error"))
+		R500(w, ErrInternalServer)
 		LOGHANDLER.Error(err)
 	}
 }
