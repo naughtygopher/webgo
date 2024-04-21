@@ -3,6 +3,7 @@ package webgo
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -21,6 +22,15 @@ type httpResponseWriter interface {
 }
 
 func init() {
+	var err error
+	jsonErrPayload, err = json.Marshal(errOutput{
+		Errors: ErrInternalServer,
+		Status: http.StatusInternalServerError,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	// ensure the custom response writer implements all the required functions
 	crw := &customResponseWriter{}
 	_ = httpResponseWriter(crw)
