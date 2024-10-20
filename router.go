@@ -392,7 +392,7 @@ func httpHandlers(routes []*Route) map[string][]*Route {
 			return nil
 		}
 
-		if route.Handlers == nil || len(route.Handlers) == 0 {
+		if len(route.Handlers) == 0 {
 			LOGHANDLER.Fatal(
 				fmt.Sprintf(
 					"No handlers provided for the route '%s', method '%s'",
