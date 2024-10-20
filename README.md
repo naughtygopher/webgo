@@ -1,11 +1,11 @@
 <p align="center"><img src="https://user-images.githubusercontent.com/1092882/60883564-20142380-a268-11e9-988a-d98fb639adc6.png" alt="webgo gopher" width="256px"/></p>
 
-[![](https://github.com/bnkamalesh/webgo/actions/workflows/tests.yaml/badge.svg)](https://github.com/bnkamalesh/webgo/actions/workflows/tests.yaml)
-[![coverage](https://img.shields.io/codecov/c/github/bnkamalesh/webgo.svg)](https://codecov.io/gh/bnkamalesh/webgo)
-[![](https://goreportcard.com/badge/github.com/bnkamalesh/webgo)](https://goreportcard.com/report/github.com/bnkamalesh/webgo)
-[![](https://api.codeclimate.com/v1/badges/85b3a55c3fa6b4c5338d/maintainability)](https://codeclimate.com/github/bnkamalesh/webgo/maintainability)
-[![](https://godoc.org/github.com/nathany/looper?status.svg)](http://godoc.org/github.com/bnkamalesh/webgo)
+[![](https://github.com/naughtygopher/webgo/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/naughtygopher/webgo/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/naughtygopher/webgo.svg)](https://pkg.go.dev/github.com/naughtygopher/webgo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/naughtygopher/webgo)](https://goreportcard.com/report/github.com/naughtygopher/webgo)
+[![Coverage Status](https://coveralls.io/repos/github/naughtygopher/webgo/badge.svg?branch=master)](https://coveralls.io/github/naughtygopher/webgo?branch=master)
 [![](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#web-frameworks)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/creativecreature/sturdyc/blob/master/LICENSE)
 
 # WebGo v7.0.4
 
@@ -13,16 +13,16 @@ WebGo is a minimalistic router for [Go](https://golang.org) to build web applica
 
 ### Contents
 
-1. [Router](https://github.com/bnkamalesh/webgo#router)
-2. [Handler chaining](https://github.com/bnkamalesh/webgo#handler-chaining)
-3. [Middleware](https://github.com/bnkamalesh/webgo#middleware)
-4. [Error handling](https://github.com/bnkamalesh/webgo#error-handling)
-5. [Helper functions](https://github.com/bnkamalesh/webgo#helper-functions)
-6. [HTTPS ready](https://github.com/bnkamalesh/webgo#https-ready)
-7. [Graceful shutdown](https://github.com/bnkamalesh/webgo#graceful-shutdown)
-8. [Logging](https://github.com/bnkamalesh/webgo#logging)
-9. [Server-Sent Events](https://github.com/bnkamalesh/webgo#server-sent-events)
-10. [Usage](https://github.com/bnkamalesh/webgo#usage)
+1. [Router](https://github.com/naughtygopher/webgo#router)
+2. [Handler chaining](https://github.com/naughtygopher/webgo#handler-chaining)
+3. [Middleware](https://github.com/naughtygopher/webgo#middleware)
+4. [Error handling](https://github.com/naughtygopher/webgo#error-handling)
+5. [Helper functions](https://github.com/naughtygopher/webgo#helper-functions)
+6. [HTTPS ready](https://github.com/naughtygopher/webgo#https-ready)
+7. [Graceful shutdown](https://github.com/naughtygopher/webgo#graceful-shutdown)
+8. [Logging](https://github.com/naughtygopher/webgo#logging)
+9. [Server-Sent Events](https://github.com/naughtygopher/webgo#server-sent-events)
+10. [Usage](https://github.com/naughtygopher/webgo#usage)
 
 ## Router
 
@@ -31,13 +31,13 @@ Webgo has a simplistic, linear path matching router and supports defining [URI](
 1. `/api/users` - URI with no dynamic values
 2. `/api/users/:userID`
    - URI with a named parameter, `userID`
-   - If TrailingSlash is set to true, it will accept the URI ending with a '/', refer to [sample](https://github.com/bnkamalesh/webgo#sample)
+   - If TrailingSlash is set to true, it will accept the URI ending with a '/', refer to [sample](https://github.com/naughtygopher/webgo#sample)
 3. `/api/users/:misc*`
    - Named URI parameter `misc`, with a wildcard suffix '\*'
    - This matches everything after `/api/users`. e.g. `/api/users/a/b/c/d`
 
 When there are multiple handlers matching the same URI, only the first occurring handler will handle the request.
-Refer to the [sample](https://github.com/bnkamalesh/webgo#sample) to see how routes are configured. You can access named parameters of the URI using the `Context` function.
+Refer to the [sample](https://github.com/naughtygopher/webgo#sample) to see how routes are configured. You can access named parameters of the URI using the `Context` function.
 
 Note: webgo Context is **not** available inside the special handlers (not found & method not implemented)
 
@@ -62,11 +62,11 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 
 ## Handler chaining
 
-Handler chaining lets you execute multiple handlers for a given route. Execution of a chain can be configured to run even after a handler has written a response to the HTTP request, if you set `FallThroughPostResponse` to `true` (refer [sample](https://github.com/bnkamalesh/webgo/blob/master/cmd/main.go#L70)).
+Handler chaining lets you execute multiple handlers for a given route. Execution of a chain can be configured to run even after a handler has written a response to the HTTP request, if you set `FallThroughPostResponse` to `true` (refer [sample](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L70)).
 
 ## Middleware
 
-WebGo [middlware](https://godoc.org/github.com/bnkamalesh/webgo#Middleware) lets you wrap all the routes with a middleware unlike handler chaining. The router exposes a method [Use](https://godoc.org/github.com/bnkamalesh/webgo#Router.Use) && [UseOnSpecialHandlers](https://godoc.org/github.com/bnkamalesh/webgo#Router.UseOnSpecialHandlers) to add a Middleware to the router.
+WebGo [middlware](https://godoc.org/github.com/naughtygopher/webgo#Middleware) lets you wrap all the routes with a middleware unlike handler chaining. The router exposes a method [Use](https://godoc.org/github.com/naughtygopher/webgo#Router.Use) && [UseOnSpecialHandlers](https://godoc.org/github.com/naughtygopher/webgo#Router.UseOnSpecialHandlers) to add a Middleware to the router.
 
 NotFound && NotImplemented are considered `Special` handlers. `webgo.Context(r)` within special handlers will return `nil`.
 
@@ -83,11 +83,11 @@ func main() {
 
 ## Error handling
 
-Webgo context has 2 methods to [set](https://github.com/bnkamalesh/webgo/blob/master/webgo.go#L60) & [get](https://github.com/bnkamalesh/webgo/blob/master/webgo.go#L66) erro within a request context. It enables Webgo to implement a single middleware where you can handle error returned within an HTTP handler. [set error](https://github.com/bnkamalesh/webgo/blob/master/cmd/main.go#L45), [get error](https://github.com/bnkamalesh/webgo/blob/master/cmd/main.go#L51).
+Webgo context has 2 methods to [set](https://github.com/naughtygopher/webgo/blob/master/webgo.go#L60) & [get](https://github.com/naughtygopher/webgo/blob/master/webgo.go#L66) erro within a request context. It enables Webgo to implement a single middleware where you can handle error returned within an HTTP handler. [set error](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L45), [get error](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L51).
 
 ## Helper functions
 
-WebGo provides a few helper functions. When using `Send` or `SendResponse` (other Rxxx responder functions), the response is wrapped in WebGo's [response struct](https://github.com/bnkamalesh/webgo/blob/master/responses.go#L17) and is serialized as JSON.
+WebGo provides a few helper functions. When using `Send` or `SendResponse` (other Rxxx responder functions), the response is wrapped in WebGo's [response struct](https://github.com/naughtygopher/webgo/blob/master/responses.go#L17) and is serialized as JSON.
 
 ```json
 {
@@ -96,7 +96,7 @@ WebGo provides a few helper functions. When using `Send` or `SendResponse` (othe
 }
 ```
 
-When using `SendError`, the response is wrapped in WebGo's [error response struct](https://github.com/bnkamalesh/webgo/blob/master/responses.go#L23) and is serialzied as JSON.
+When using `SendError`, the response is wrapped in WebGo's [error response struct](https://github.com/naughtygopher/webgo/blob/master/responses.go#L23) and is serialzied as JSON.
 
 ```json
 {
@@ -190,7 +190,7 @@ func main() {
 
 ## Logging
 
-WebGo exposes a singleton & global scoped logger variable [LOGHANDLER](https://godoc.org/github.com/bnkamalesh/webgo#Logger) with which you can plug in your custom logger by implementing the [Logger](https://godoc.org/github.com/bnkamalesh/webgo#Logger) interface.
+WebGo exposes a singleton & global scoped logger variable [LOGHANDLER](https://godoc.org/github.com/naughtygopher/webgo#Logger) with which you can plug in your custom logger by implementing the [Logger](https://godoc.org/github.com/naughtygopher/webgo#Logger) interface.
 
 ### Configuring the default Logger
 
@@ -202,7 +202,7 @@ The default logger uses Go standard library's `log.Logger` with `os.Stdout` (for
 
 ## Usage
 
-A fully functional sample is provided [here](https://github.com/bnkamalesh/webgo/blob/master/cmd/main.go).
+A fully functional sample is provided [here](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go).
 
 ### Benchmark
 
@@ -211,11 +211,11 @@ A fully functional sample is provided [here](https://github.com/bnkamalesh/webgo
 
 ### Contributing
 
-Refer [here](https://github.com/bnkamalesh/webgo/blob/master/CONTRIBUTING.md) to find out details about making a contribution
+Refer [here](https://github.com/naughtygopher/webgo/blob/master/CONTRIBUTING.md) to find out details about making a contribution
 
 ### Credits
 
-Thanks to all the [contributors](https://github.com/bnkamalesh/webgo/graphs/contributors)
+Thanks to all the [contributors](https://github.com/naughtygopher/webgo/graphs/contributors)
 
 ## The gopher
 

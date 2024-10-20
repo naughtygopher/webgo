@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bnkamalesh/webgo/v7"
-	"github.com/bnkamalesh/webgo/v7/extensions/sse"
+	"github.com/naughtygopher/webgo/v7"
+	"github.com/naughtygopher/webgo/v7/extensions/sse"
 )
 
 // StaticFilesHandler is used to serve static files

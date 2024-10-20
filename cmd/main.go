@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnkamalesh/webgo/v7"
-	"github.com/bnkamalesh/webgo/v7/extensions/sse"
-	"github.com/bnkamalesh/webgo/v7/middleware/accesslog"
-	"github.com/bnkamalesh/webgo/v7/middleware/cors"
+	"github.com/naughtygopher/webgo/v7"
+	"github.com/naughtygopher/webgo/v7/extensions/sse"
+	"github.com/naughtygopher/webgo/v7/middleware/accesslog"
+	"github.com/naughtygopher/webgo/v7/middleware/cors"
 )
 
 var (

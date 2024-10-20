@@ -18,9 +18,7 @@ If you have Go installed on your computer, open the terminal and:
 
 ```bash
 $ cd $GOPATH/src
-$ mkdir -p github.com/bnkamalesh
-$ cd github.com/bnkamalesh
-$ git clone https://github.com/bnkamalesh/webgo.git
+$ git clone https://github.com/naughtygopher/webgo.git
 $ cd webgo/cmd
 $ go run *.go
 
@@ -31,13 +29,13 @@ Info 2023/02/05 08:51:26 HTTPS server, listening on :9595
 Or if you have [Docker](https://www.docker.com/), open the terminal and:
 
 ```bash
-$ git clone https://github.com/bnkamalesh/webgo.git
+$ git clone https://github.com/naughtygopher/webgo.git
 $ cd webgo
 $ docker run \
 -p 8080:8080 \
 -p 9595:9595 \
--v ${PWD}:/go/src/github.com/bnkamalesh/webgo/ \
--w /go/src/github.com/bnkamalesh/webgo/cmd \
+-v ${PWD}:/go/src/github.com/naughtygopher/webgo/ \
+-w /go/src/github.com/naughtygopher/webgo/cmd \
 --rm -ti golang:latest go run *.go
 
 Info 2023/02/05 08:51:26 HTTP server, listening on :8080

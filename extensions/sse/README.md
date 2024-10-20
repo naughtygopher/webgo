@@ -10,7 +10,7 @@ It provides the following hooks for customizing the workflows:
 
 ```golang
 import (
-    "github.com/bnkamalesh/webgo/extensions/sse"
+    "github.com/naughtygopher/webgo/extensions/sse"
 )
 func main() {
     sseService := sse.New()

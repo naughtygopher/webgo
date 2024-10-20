@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bnkamalesh/webgo/v7"
+	"github.com/naughtygopher/webgo/v7"
 )
 
 func TestCORSEmptyconfig(t *testing.T) {
