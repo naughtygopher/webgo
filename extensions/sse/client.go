@@ -44,33 +44,41 @@ func (cs *Clients) New(ctx context.Context, w http.ResponseWriter, clientID stri
 	}
 
 	cs.locker.Lock()
-	cs.clients[clientID] = cli
-	count := len(cs.clients)
-	cs.locker.Unlock()
+	defer cs.locker.Unlock()
 
-	return cli, count
+	cs.clients[clientID] = cli
+
+	return cli, len(cs.clients)
 }
 
 func (cs *Clients) Range(f func(cli *Client)) {
 	cs.locker.Lock()
+	copied := make([]*Client, 0, len(cs.clients))
 	for clientID := range cs.clients {
-		f(cs.clients[clientID])
+		copied = append(copied, cs.clients[clientID])
 	}
 	cs.locker.Unlock()
+
+	for i := range copied {
+		f(copied[i])
+	}
 }
 
 func (cs *Clients) Remove(clientID string) int {
 	cs.locker.Lock()
+	defer cs.locker.Unlock()
+
 	delete(cs.clients, clientID)
 	count := len(cs.clients)
-	cs.locker.Unlock()
+
 	return count
 }
 
 func (cs *Clients) Active() int {
 	cs.locker.Lock()
+	defer cs.locker.Unlock()
+
 	count := len(cs.clients)
-	cs.locker.Unlock()
 	return count
 
 }
@@ -80,20 +88,22 @@ func (cs *Clients) Active() int {
 func (cs *Clients) Clients() []*Client {
 	idx := 0
 	cs.locker.Lock()
+	defer cs.locker.Unlock()
+
 	list := make([]*Client, len(cs.clients))
 	for clientID := range cs.clients {
 		cli := cs.clients[clientID]
 		list[idx] = cli
 		idx++
 	}
-	cs.locker.Unlock()
+
 	return list
 }
 
 func (cs *Clients) Client(clientID string) *Client {
 	cs.locker.Lock()
+	defer cs.locker.Unlock()
 	cli := cs.clients[clientID]
-	cs.locker.Unlock()
 
 	return cli
 }
