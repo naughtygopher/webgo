@@ -104,6 +104,7 @@ func (sse *SSE) RemoveClient(ctx context.Context, clientID string) {
 	cli := sse.Clients.Client(clientID)
 	if cli != nil {
 		close(cli.Msg)
+		cli.Ctx.Done()
 	}
 
 	sse.OnRemoveClient(
@@ -116,6 +117,7 @@ func (sse *SSE) RemoveClient(ctx context.Context, clientID string) {
 func (sse *SSE) Client(id string) *Client {
 	return sse.Clients.Client(id)
 }
+
 func DefaultCreateHook(ctx context.Context, client *Client, count int)  {}
 func DefaultRemoveHook(ctx context.Context, clientID string, count int) {}
 func DefaultOnSend(ctx context.Context, client *Client, err error)      {}
