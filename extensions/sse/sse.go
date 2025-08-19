@@ -24,7 +24,7 @@ type SSE struct {
 
 	// OnSend is a hook, which is called *after* a message is sent to a client
 	OnSend func(ctx context.Context, client *Client, err error)
-	// BeforeSend is a hook, which is called right before a message is sent to a client
+	// BeforeSend is a hook, which is called before starting to listen for messages to send
 	BeforeSend func(ctx context.Context, client *Client)
 
 	Clients ClientManager
@@ -101,12 +101,6 @@ func (sse *SSE) ActiveClients() int {
 }
 
 func (sse *SSE) RemoveClient(ctx context.Context, clientID string) {
-	cli := sse.Clients.Client(clientID)
-	if cli != nil {
-		close(cli.Msg)
-		cli.Ctx.Done()
-	}
-
 	sse.OnRemoveClient(
 		ctx,
 		clientID,

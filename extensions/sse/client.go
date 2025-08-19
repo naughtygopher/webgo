@@ -67,9 +67,20 @@ func (cs *Clients) listener(events <-chan event) {
 			ev.Response <- &eventResponse{
 				Clients: copied,
 			}
+
 		case eTypeRemoveClient:
+			cli := cs.clients[ev.ClientID]
+			if cli == nil {
+				ev.Response <- nil
+				return
+			}
+
+			close(cli.Msg)
+			cli.Ctx.Done()
+
 			delete(cs.clients, ev.ClientID)
 			ev.Response <- nil
+
 		case eTypeClient:
 			ev.Response <- &eventResponse{
 				Client: cs.clients[ev.ClientID],
@@ -86,6 +97,7 @@ func (cs *Clients) New(ctx context.Context, w http.ResponseWriter, clientID stri
 		ResponseWriter: w,
 		Ctx:            ctx,
 	}
+
 	cs.events <- event{
 		Type:   eTypeNewClient,
 		Client: cli,
@@ -149,11 +161,12 @@ func (cs *Clients) Client(clientID string) *Client {
 }
 
 func NewClientManager() ClientManager {
-	events := make(chan event, 10)
+	const buffer = 10
+	events := make(chan event, buffer)
 	cli := &Clients{
 		clients:   make(map[string]*Client),
 		events:    events,
-		MsgBuffer: 10,
+		MsgBuffer: buffer,
 	}
 	go cli.listener(events)
 	return cli
