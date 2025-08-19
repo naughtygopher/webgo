@@ -3,7 +3,6 @@ package sse
 import (
 	"context"
 	"net/http"
-	"sync"
 )
 
 type ClientManager interface {
@@ -28,10 +27,55 @@ type Client struct {
 	Ctx            context.Context
 }
 
+type eventType int
+
+const (
+	eTypeNewClient eventType = iota
+	eTypeClientList
+	eTypeRemoveClient
+	eTypeActiveClientCount
+	eTypeClient
+)
+
+type event struct {
+	Type     eventType
+	ClientID string
+	Client   *Client
+	Response chan *eventResponse
+}
+type eventResponse struct {
+	Clients          []*Client
+	RemainingClients int
+	Client           *Client
+}
 type Clients struct {
 	clients   map[string]*Client
-	locker    sync.Mutex
 	MsgBuffer int
+	events    chan<- event
+}
+
+func (cs *Clients) listener(events <-chan event) {
+	for ev := range events {
+		switch ev.Type {
+		case eTypeNewClient:
+			cs.clients[ev.Client.ID] = ev.Client
+		case eTypeClientList:
+			copied := make([]*Client, 0, len(cs.clients))
+			for clientID := range cs.clients {
+				copied = append(copied, cs.clients[clientID])
+			}
+			ev.Response <- &eventResponse{
+				Clients: copied,
+			}
+		case eTypeRemoveClient:
+			delete(cs.clients, ev.ClientID)
+			ev.Response <- nil
+		case eTypeClient:
+			ev.Response <- &eventResponse{
+				Client: cs.clients[ev.ClientID],
+			}
+		}
+	}
 }
 
 func (cs *Clients) New(ctx context.Context, w http.ResponseWriter, clientID string) (*Client, int) {
@@ -42,75 +86,75 @@ func (cs *Clients) New(ctx context.Context, w http.ResponseWriter, clientID stri
 		ResponseWriter: w,
 		Ctx:            ctx,
 	}
-
-	cs.locker.Lock()
-	defer cs.locker.Unlock()
-
-	cs.clients[clientID] = cli
+	cs.events <- event{
+		Type:   eTypeNewClient,
+		Client: cli,
+	}
 
 	return cli, len(cs.clients)
 }
 
 func (cs *Clients) Range(f func(cli *Client)) {
-	cs.locker.Lock()
-	copied := make([]*Client, 0, len(cs.clients))
-	for clientID := range cs.clients {
-		copied = append(copied, cs.clients[clientID])
+	rch := make(chan *eventResponse)
+	cs.events <- event{
+		Type:     eTypeClientList,
+		Response: rch,
 	}
-	cs.locker.Unlock()
 
-	for i := range copied {
-		f(copied[i])
+	response := <-rch
+	for i := range response.Clients {
+		f(response.Clients[i])
 	}
 }
 
 func (cs *Clients) Remove(clientID string) int {
-	cs.locker.Lock()
-	defer cs.locker.Unlock()
+	rch := make(chan *eventResponse)
+	cs.events <- event{
+		Type:     eTypeRemoveClient,
+		ClientID: clientID,
+		Response: rch,
+	}
 
-	delete(cs.clients, clientID)
-	count := len(cs.clients)
+	<-rch
 
-	return count
+	return len(cs.clients)
 }
 
 func (cs *Clients) Active() int {
-	cs.locker.Lock()
-	defer cs.locker.Unlock()
-
-	count := len(cs.clients)
-	return count
+	return len(cs.clients)
 
 }
 
 // MessageChannels returns a slice of message channels of all clients
 // which you can then use to send message concurrently
 func (cs *Clients) Clients() []*Client {
-	idx := 0
-	cs.locker.Lock()
-	defer cs.locker.Unlock()
-
-	list := make([]*Client, len(cs.clients))
-	for clientID := range cs.clients {
-		cli := cs.clients[clientID]
-		list[idx] = cli
-		idx++
+	rch := make(chan *eventResponse)
+	cs.events <- event{
+		Type:     eTypeClientList,
+		Response: rch,
 	}
 
-	return list
+	response := <-rch
+	return response.Clients
 }
 
 func (cs *Clients) Client(clientID string) *Client {
-	cs.locker.Lock()
-	defer cs.locker.Unlock()
-	cli := cs.clients[clientID]
-
-	return cli
+	rch := make(chan *eventResponse)
+	cs.events <- event{
+		Type:     eTypeClientList,
+		Response: rch,
+	}
+	cli := <-rch
+	return cli.Client
 }
 
 func NewClientManager() ClientManager {
-	return &Clients{
-		clients: make(map[string]*Client),
-		locker:  sync.Mutex{},
+	events := make(chan event, 10)
+	cli := &Clients{
+		clients:   make(map[string]*Client),
+		events:    events,
+		MsgBuffer: 10,
 	}
+	go cli.listener(events)
+	return cli
 }
