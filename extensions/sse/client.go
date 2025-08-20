@@ -37,6 +37,20 @@ const (
 	eTypeClient
 )
 
+func (et eventType) String() string {
+	switch et {
+	case eTypeNewClient:
+		return "new_client"
+	case eTypeClientList:
+		return "client_list"
+	case eTypeRemoveClient:
+		return "remove_client"
+	case eTypeActiveClientCount:
+		return "active_client_count"
+	}
+	return "unknown"
+}
+
 type event struct {
 	Type     eventType
 	ClientID string
@@ -70,13 +84,11 @@ func (cs *Clients) listener(events <-chan event) {
 
 		case eTypeRemoveClient:
 			cli := cs.clients[ev.ClientID]
-			if cli == nil {
+			if cli != nil {
+				// Ctx.Done() is needed to close its streaming handler
+				cli.Ctx.Done()
 				ev.Response <- nil
-				return
 			}
-
-			close(cli.Msg)
-			cli.Ctx.Done()
 
 			delete(cs.clients, ev.ClientID)
 			ev.Response <- nil
@@ -114,9 +126,12 @@ func (cs *Clients) Range(f func(cli *Client)) {
 	}
 
 	response := <-rch
-	for i := range response.Clients {
-		f(response.Clients[i])
-	}
+	// running in Go routine to not block the event listener
+	go func() {
+		for i := range response.Clients {
+			f(response.Clients[i])
+		}
+	}()
 }
 
 func (cs *Clients) Remove(clientID string) int {
