@@ -73,6 +73,7 @@ func (cs *Clients) listener(events <-chan event) {
 		switch ev.Type {
 		case eTypeNewClient:
 			cs.clients[ev.Client.ID] = ev.Client
+
 		case eTypeClientList:
 			copied := make([]*Client, 0, len(cs.clients))
 			for clientID := range cs.clients {
@@ -84,12 +85,13 @@ func (cs *Clients) listener(events <-chan event) {
 
 		case eTypeRemoveClient:
 			cli := cs.clients[ev.ClientID]
-			if cli != nil {
-				// Ctx.Done() is needed to close its streaming handler
-				cli.Ctx.Done()
+			if cli == nil {
 				ev.Response <- nil
+				continue
 			}
 
+			// Ctx.Done() is needed to close its streaming handler
+			cli.Ctx.Done()
 			delete(cs.clients, ev.ClientID)
 			ev.Response <- nil
 
@@ -126,12 +128,10 @@ func (cs *Clients) Range(f func(cli *Client)) {
 	}
 
 	response := <-rch
-	// running in Go routine to not block the event listener
-	go func() {
-		for i := range response.Clients {
-			f(response.Clients[i])
-		}
-	}()
+	for i := range response.Clients {
+		f(response.Clients[i])
+	}
+
 }
 
 func (cs *Clients) Remove(clientID string) int {

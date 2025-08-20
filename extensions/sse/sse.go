@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+var closeMessage = (&Message{
+	Data: `{"error":"close"}`,
+}).Bytes()
+
 type SSE struct {
 	// ClientIDHeader is the HTTP request header in which the client ID is set. Default is `sse-clientid`
 	ClientIDHeader string
@@ -46,7 +50,10 @@ func (sse *SSE) Handler(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	clientID := r.Header.Get(sse.ClientIDHeader)
 	client := sse.NewClient(ctx, w, clientID)
-	defer sse.RemoveClient(ctx, clientID)
+	defer func() {
+		w.WriteHeader(http.StatusNoContent)
+		sse.RemoveClient(ctx, clientID)
+	}()
 
 	sse.BeforeSend(ctx, client)
 	for {
@@ -65,7 +72,7 @@ func (sse *SSE) Handler(w http.ResponseWriter, r *http.Request) error {
 
 		case <-ctx.Done():
 			{
-				err := ctx.Err()
+				_, err := w.Write(closeMessage)
 				sse.OnSend(ctx, client, err)
 				return err
 			}
