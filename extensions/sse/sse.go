@@ -37,7 +37,6 @@ func (sse *SSE) Handler(w http.ResponseWriter, r *http.Request) error {
 	if !hasFlusher {
 		return sse.UnsupportedMessage(w, r)
 	}
-
 	header := w.Header()
 	header.Set("Content-Type", "text/event-stream")
 	header.Set("Connection", "keep-alive")
@@ -45,7 +44,6 @@ func (sse *SSE) Handler(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusOK)
 
 	ctx := r.Context()
-
 	clientID := r.Header.Get(sse.ClientIDHeader)
 	client := sse.NewClient(ctx, w, clientID)
 	defer sse.RemoveClient(ctx, clientID)
