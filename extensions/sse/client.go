@@ -168,7 +168,8 @@ func (cs *Clients) Clients() []*Client {
 func (cs *Clients) Client(clientID string) *Client {
 	rch := make(chan *eventResponse)
 	cs.events <- event{
-		Type:     eTypeClientList,
+		Type:     eTypeClient,
+		ClientID: clientID,
 		Response: rch,
 	}
 	cli := <-rch
