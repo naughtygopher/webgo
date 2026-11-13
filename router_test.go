@@ -782,3 +782,34 @@ func BenchmarkRouterRoutes(b *testing.B) {
 		}
 	}
 }
+
+type deadlineWriter struct {
+	http.ResponseWriter
+	deadline time.Time
+}
+
+func (d *deadlineWriter) SetWriteDeadline(t time.Time) error {
+	d.deadline = t
+	return nil
+}
+
+func TestCustomResponseWriterUnwrap(t *testing.T) {
+	t.Parallel()
+
+	dw := &deadlineWriter{ResponseWriter: httptest.NewRecorder()}
+	crw := newCRW(dw, http.StatusOK)
+	defer releaseCRW(crw)
+
+	if crw.Unwrap() != http.ResponseWriter(dw) {
+		t.Fatal("Unwrap did not return the underlying response writer")
+	}
+
+	deadline := time.Now().Add(time.Minute)
+	err := http.NewResponseController(crw).SetWriteDeadline(deadline)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !dw.deadline.Equal(deadline) {
+		t.Errorf("expected deadline %v to reach the underlying writer, got %v", deadline, dw.deadline)
+	}
+}
