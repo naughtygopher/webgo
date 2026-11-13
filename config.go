@@ -23,8 +23,14 @@ type Config struct {
 
 	// ReadTimeout is the maximum duration for which the server would read a request
 	ReadTimeout time.Duration `json:"readTimeout,omitempty"`
+	// ReadHeaderTimeout is the maximum duration for which the server would read the request headers.
+	// If zero, ReadTimeout is used. If both are zero, there is no timeout
+	ReadHeaderTimeout time.Duration `json:"readHeaderTimeout,omitempty"`
 	// WriteTimeout is the maximum duration for which the server would try to respond
 	WriteTimeout time.Duration `json:"writeTimeout,omitempty"`
+	// IdleTimeout is the maximum duration the server waits for the next request on a keep-alive connection.
+	// If zero, ReadTimeout is used. If both are zero, there is no timeout
+	IdleTimeout time.Duration `json:"idleTimeout,omitempty"`
 
 	// InsecureSkipVerify is the HTTP certificate verification
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`

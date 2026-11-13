@@ -137,6 +137,18 @@ go router.StartHTTPS()
 router.Start()
 ```
 
+## Server timeouts
+
+`ReadTimeout`, `ReadHeaderTimeout`, `WriteTimeout` & `IdleTimeout` of `Config` are passed on to the underlying `http.Server`. None of them are enabled unless set. It is recommended to set `ReadHeaderTimeout` (or `ReadTimeout`) when the server is exposed to the internet, to protect against slow clients holding connections open.
+
+```golang
+cfg := &webgo.Config{
+	Port:              "8080",
+	ReadHeaderTimeout: 5 * time.Second,
+	IdleTimeout:       120 * time.Second,
+}
+```
+
 ## Graceful shutdown
 
 Graceful shutdown lets you shutdown the server without affecting any live connections/clients connected to the server. Any new connection request after initiating a shutdown would be ignored.
