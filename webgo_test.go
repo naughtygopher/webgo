@@ -48,22 +48,33 @@ func TestResponseStatus(t *testing.T) {
 func TestStart(t *testing.T) {
 	t.Parallel()
 	router, _ := setup(t, "9696")
-	go router.Start()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		router.Start()
+	}()
 	time.Sleep(time.Second * 2)
 	err := router.Shutdown()
 	if err != nil {
 		t.Fatal(err)
 	}
+	// the goroutine reads LOGHANDLER, it should not outlive the test
+	<-done
 }
 func TestStartHTTPS(t *testing.T) {
 	t.Parallel()
 	router, _ := setup(t, "8443")
-	go router.StartHTTPS()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		router.StartHTTPS()
+	}()
 	time.Sleep(time.Second * 2)
 	err := router.ShutdownHTTPS()
 	if err != nil {
 		t.Fatal(err)
 	}
+	<-done
 }
 
 func TestErrorHandling(t *testing.T) {
