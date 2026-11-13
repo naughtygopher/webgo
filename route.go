@@ -1,7 +1,6 @@
 package webgo
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
@@ -121,17 +120,20 @@ func (r *Route) init() error {
 
 // matchPath matches the requestURI with the URI pattern of the route
 func (r *Route) matchPath(requestURI string) (bool, map[string]string) {
-	p := bytes.NewBufferString(r.Pattern)
 	if r.TrailingSlash {
-		p.WriteString("/")
+		// requestURI is either pattern or pattern + "/"
+		plen := len(r.Pattern)
+		if requestURI == r.Pattern ||
+			(len(requestURI) == plen+1 && requestURI[plen] == '/' && requestURI[:plen] == r.Pattern) {
+			return true, nil
+		}
 	} else {
-		if requestURI[len(requestURI)-1] == '/' {
+		if requestURI != "" && requestURI[len(requestURI)-1] == '/' {
 			return false, nil
 		}
-	}
-
-	if r.Pattern == requestURI || p.String() == requestURI {
-		return true, nil
+		if requestURI == r.Pattern {
+			return true, nil
+		}
 	}
 
 	return r.matchWithWildcard(requestURI)

@@ -239,3 +239,48 @@ func TestMatchWithWildcard(t *testing.T) {
 		}
 	})
 }
+
+func TestMatchPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		pattern       string
+		trailingSlash bool
+		uri           string
+		want          bool
+	}{
+		{"exact", "/a/b", false, "/a/b", true},
+		{"exact with trailing slash enabled", "/a/b", true, "/a/b", true},
+		{"extra slash, trailing slash enabled", "/a/b", true, "/a/b/", true},
+		{"extra slash, trailing slash disabled", "/a/b", false, "/a/b/", false},
+		{"different path", "/a/b", true, "/a/c", false},
+		{"longer path", "/a/b", true, "/a/bc", false},
+		{"two extra characters", "/a/b", true, "/a/b/c", false},
+		{"root, trailing slash disabled", "/", false, "/", false},
+		{"root, trailing slash enabled", "/", true, "/", true},
+		{"empty uri, trailing slash disabled", "/a", false, "", false},
+		{"empty uri, trailing slash enabled", "/a", true, "", false},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			route := Route{
+				Method:        http.MethodGet,
+				Pattern:       tt.pattern,
+				TrailingSlash: tt.trailingSlash,
+				Handlers:      []http.HandlerFunc{dummyHandler},
+			}
+			if err := route.init(); err != nil {
+				t.Fatal(err)
+			}
+
+			got, _ := route.matchPath(tt.uri)
+			if got != tt.want {
+				t.Errorf("matchPath(%q) = %v, want %v", tt.uri, got, tt.want)
+			}
+		})
+	}
+}
