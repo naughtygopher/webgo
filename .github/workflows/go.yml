@@ -44,7 +44,7 @@ jobs:
         run: go build -v ./...
 
       - name: Tests
-        run: go test -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v /cmd | grep -v /extensions/)
+        run: go test -race -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v /cmd | grep -v /extensions/)
 
       - name: Send coverage
         uses: shogo82148/actions-goveralls@v1

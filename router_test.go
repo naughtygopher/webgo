@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -579,32 +580,49 @@ func testTable() []struct {
 	}
 }
 
+// testLogger is safe for concurrent use, since webgo logs from multiple goroutines
 type testLogger struct {
+	mu  sync.Mutex
 	out bytes.Buffer
 }
 
-func (tl *testLogger) Debug(data ...any) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+func (tl *testLogger) write(data ...any) {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	fmt.Fprint(&tl.out, data...)
 }
-func (tl *testLogger) Info(data ...any) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) String() string {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	return tl.out.String()
 }
-func (tl *testLogger) Warn(data ...any) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) Reset() {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	tl.out.Reset()
 }
-func (tl *testLogger) Error(data ...any) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
-}
-func (tl *testLogger) Fatal(data ...any) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) Debug(data ...any) { tl.write(data...) }
+func (tl *testLogger) Info(data ...any)  { tl.write(data...) }
+func (tl *testLogger) Warn(data ...any)  { tl.write(data...) }
+func (tl *testLogger) Error(data ...any) { tl.write(data...) }
+func (tl *testLogger) Fatal(data ...any) { tl.write(data...) }
+
+// useTestLogger swaps the global LOGHANDLER and restores it when the test ends.
+// LOGHANDLER is shared by all tests, hence tests using this must not be parallel.
+func useTestLogger(t *testing.T) *testLogger {
+	t.Helper()
+	tl := &testLogger{}
+	prev := LOGHANDLER
+	LOGHANDLER = tl
+	t.Cleanup(func() { LOGHANDLER = prev })
+	return tl
 }
 
 func Test_httpHandlers(t *testing.T) {
-	// t.Parallel()
-	tl := &testLogger{
-		out: bytes.Buffer{},
-	}
-	LOGHANDLER = tl
+	tl := useTestLogger(t)
 
 	// test invalid method
 	httpHandlers(
@@ -615,7 +633,7 @@ func Test_httpHandlers(t *testing.T) {
 				Method:  "HELLO",
 			},
 		})
-	got := tl.out.String()
+	got := tl.String()
 	want := "Unsupported HTTP method provided. Method: 'HELLO'"
 	if got != want {
 		t.Errorf(
@@ -624,7 +642,7 @@ func Test_httpHandlers(t *testing.T) {
 			got,
 		)
 	}
-	tl.out.Reset()
+	tl.Reset()
 
 	// test empty handlers
 	httpHandlers(
@@ -635,7 +653,7 @@ func Test_httpHandlers(t *testing.T) {
 				Method:  http.MethodGet,
 			},
 		})
-	str := tl.out.String()
+	str := tl.String()
 	want = "provided for the route '/hello/world', method 'GET'"
 	got = str[len(str)-len(want):]
 	if got != want {
@@ -645,7 +663,7 @@ func Test_httpHandlers(t *testing.T) {
 			got,
 		)
 	}
-	tl.out.Reset()
+	tl.Reset()
 }
 
 func TestWildcardMadness(t *testing.T) {
