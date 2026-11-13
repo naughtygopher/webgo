@@ -2,8 +2,10 @@ package webgo
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -67,7 +69,7 @@ func BenchmarkMatchWithWildcard(b *testing.B) {
 		return
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ok, _ := route.matchPath(uri)
 		if !ok {
 			b.Errorf("Expected match, got no match")
@@ -264,7 +266,6 @@ func TestMatchPath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			route := Route{
@@ -282,5 +283,163 @@ func TestMatchPath(t *testing.T) {
 				t.Errorf("matchPath(%q) = %v, want %v", tt.uri, got, tt.want)
 			}
 		})
+	}
+}
+
+// matchWithWildcardRef is the v7.3.0 implementation of Route.matchWithWildcard, kept as
+// the reference to prove the allocation free rewrite did not change the matching rules.
+func matchWithWildcardRef(r *Route, requestURI string) (bool, map[string]string) {
+	if len(r.fragments) == 0 {
+		return false, nil
+	}
+
+	params := make(map[string]string, r.paramsCount)
+	uriFragments := strings.Split(requestURI, "/")[1:]
+	fragmentsLastIdx := len(r.fragments) - 1
+	fragmentIdx := 0
+	uriParameter := make([]string, 0, len(uriFragments))
+
+	for idx, fragment := range uriFragments {
+		if fragment == "" {
+			break
+		}
+
+		if fragmentIdx > fragmentsLastIdx {
+			return false, nil
+		}
+
+		currentFragment := r.fragments[fragmentIdx]
+		if !currentFragment.isVariable && currentFragment.fragment != fragment {
+			return false, nil
+		}
+
+		uriParameter = append(uriParameter, fragment)
+		if currentFragment.isVariable {
+			params[currentFragment.fragment] = strings.Join(uriParameter, "/")
+		}
+
+		if !currentFragment.hasWildcard {
+			uriParameter = make([]string, 0, len(uriFragments)-idx)
+			fragmentIdx++
+			continue
+		}
+
+		nextIdx := fragmentIdx + 1
+		if nextIdx > fragmentsLastIdx {
+			continue
+		}
+		nextPart := r.fragments[nextIdx]
+
+		if !nextPart.isVariable && nextPart.fragment == fragment {
+			params[currentFragment.fragment] = strings.Join(uriParameter[:len(uriParameter)-1], "/")
+			uriParameter = make([]string, 0, len(uriFragments)-idx)
+			fragmentIdx += 2
+		}
+	}
+
+	if len(params) != r.paramsCount {
+		return false, nil
+	}
+
+	return true, params
+}
+
+func TestMatchWithWildcardStaticPrefix(tt *testing.T) {
+	tt.Parallel()
+
+	prefixes := map[string]string{
+		"/users/:id":               "/users/",
+		"/users/:id/posts/:pid":    "/users/",
+		"/:id":                     "/",
+		"/:w*/static1/:myvar/:w2*": "/",
+		"/a/b/c/:id":               "/a/b/c/",
+		"/a/b/:w*":                 "/a/b/",
+		"/static":                  "",
+		"/files/:path*/download":   "/files/",
+	}
+	for pattern, want := range prefixes {
+		route := Route{Pattern: pattern}
+		route.parseURIWithParams()
+		if route.staticPrefix != want {
+			tt.Errorf("pattern %q: expected prefix %q, got %q", pattern, want, route.staticPrefix)
+		}
+	}
+}
+
+func TestMatchWithWildcardMatchesReference(tt *testing.T) {
+	tt.Parallel()
+
+	patterns := []string{
+		"/:id",
+		"/:id/",
+		"/users/:id",
+		"/users/:id/",
+		"/users/:id/posts/:pid",
+		"/users/:id/posts/:pid/",
+		"/a/b/c/:id",
+		"/files/:path*",
+		"/files/:path*/download",
+		"/files/:path*/:name",
+		"/:w*/static1/:myvar/:w2*",
+		"/:w*/static1",
+		"/:w*",
+		"/a/:w*/b/:x*/c",
+		"/:a/:a",
+		"/x:y/:z",
+		"/a*/:b",
+		"/a//:id",
+	}
+	uris := []string{
+		"", "/", "//", "/users", "/users/", "/users//", "/users/1", "/users/1/", "/users/1/2",
+		"/users/1/posts", "/users/1/posts/", "/users/1/posts/2", "/users/1/posts/2/", "/users/1/posts/2/3",
+		"/user/1", "/Users/1", "/a/b/c", "/a/b/c/1", "/a/b/c/1/", "/a/b/d/1", "/a//1", "/a//", "/a///1",
+		"/files", "/files/", "/files/x", "/files/x/y/z", "/files/x/y/z/", "/files/x/download",
+		"/files/x/y/download", "/files/download", "/files/download/download", "/files/x/y/z/download/n",
+		"/hello/world/static1/v1/a/b/c", "/hello/static1/v1/a", "/static1/static1/static1/static1",
+		"/static1", "/static1/", "/a/static1/b", "/q/static1/v/w", "/a/b/x/c/y/b/z/c", "/a/b/c/b/c",
+		"/foo/bar", "/foo/bar/", "/1/1", "/ab", "/xy/1", "/x:y/1",
+	}
+
+	for _, pattern := range patterns {
+		route := Route{Pattern: pattern}
+		route.parseURIWithParams()
+		for _, uri := range uris {
+			wantOK, wantParams := matchWithWildcardRef(&route, uri)
+			gotOK, gotParams := route.matchWithWildcard(uri)
+			if wantOK != gotOK {
+				tt.Errorf("pattern %q, uri %q: expected match %v, got %v", pattern, uri, wantOK, gotOK)
+				continue
+			}
+			if !wantOK {
+				if gotParams != nil {
+					tt.Errorf("pattern %q, uri %q: expected nil params on miss, got %v", pattern, uri, gotParams)
+				}
+				continue
+			}
+			if !maps.Equal(wantParams, gotParams) {
+				tt.Errorf("pattern %q, uri %q: expected params %v, got %v", pattern, uri, wantParams, gotParams)
+			}
+		}
+	}
+}
+
+func TestMatchWithWildcardMissDoesNotAllocate(tt *testing.T) {
+	route := Route{Pattern: "/users/:id/posts/:pid"}
+	route.parseURIWithParams()
+
+	uris := []string{
+		"/does/not/exist",
+		"/users/1/comments/2",
+		"/users/1/posts",
+	}
+	for _, uri := range uris {
+		allocs := testing.AllocsPerRun(100, func() {
+			if ok, _ := route.matchWithWildcard(uri); ok {
+				tt.Fatalf("expected %q to miss", uri)
+			}
+		})
+		if allocs != 0 {
+			tt.Errorf("uri %q: expected 0 allocs on miss, got %v", uri, allocs)
+		}
 	}
 }

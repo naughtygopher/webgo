@@ -1,22 +1,17 @@
 package webgo
 
 import (
-	"bytes"
 	"net/http"
 	"testing"
 	"time"
 )
 
 func TestConfig_LoadInvalid(t *testing.T) {
-	t.Parallel()
-	tl := &testLogger{
-		out: bytes.Buffer{},
-	}
-	LOGHANDLER = tl
+	tl := useTestLogger(t)
 
 	cfg := &Config{}
 	cfg.Load("")
-	str := tl.out.String()
+	str := tl.String()
 	want := "open : no such file or directoryunexpected end of JSON inputport number not provided or is invalid (should be between 0 - 65535)"
 	got := str
 	if got != want {
@@ -26,7 +21,7 @@ func TestConfig_LoadInvalid(t *testing.T) {
 			got,
 		)
 	}
-	tl.out.Reset()
+	tl.Reset()
 }
 
 func TestConfig_LoadValid(t *testing.T) {

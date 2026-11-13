@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
 )
 
@@ -46,13 +47,8 @@ var (
 		http.MethodDelete,
 	}
 
-	ctxPool = &sync.Pool{
-		New: func() interface{} {
-			return new(ContextPayload)
-		},
-	}
 	crwPool = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return new(customResponseWriter)
 		},
 	}
@@ -155,6 +151,9 @@ type Router struct {
 	// config has all the app config
 	config *Config
 
+	// srvMu guards httpServer & httpsServer, since Start/StartHTTPS usually run in
+	// their own goroutine while Shutdown/ShutdownHTTPS are called from another
+	srvMu sync.Mutex
 	// httpServer is the server handler for the active HTTP server
 	httpServer *http.Server
 	// httpsServer is the server handler for the active HTTPS server
@@ -208,9 +207,12 @@ func (rtr *Router) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctxPayload := newContext()
-	ctxPayload.Route = route
-	ctxPayload.URIParams = params
+	// ContextPayload is not pooled, since handlers can keep a reference to it (e.g. in
+	// a goroutine) which outlives this call
+	ctxPayload := &ContextPayload{
+		Route:     route,
+		URIParams: params,
+	}
 
 	// webgo context is injected to the HTTP request context
 	*r = *r.WithContext(
@@ -221,7 +223,7 @@ func (rtr *Router) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		),
 	)
 
-	defer releasePoolResources(crw, ctxPayload)
+	defer releaseCRW(crw)
 	route.serve(crw, r)
 }
 
@@ -308,20 +310,6 @@ func releaseCRW(crw *customResponseWriter) {
 	crwPool.Put(crw)
 }
 
-func newContext() *ContextPayload {
-	return ctxPool.Get().(*ContextPayload)
-}
-
-func releaseContext(cp *ContextPayload) {
-	cp.reset()
-	ctxPool.Put(cp)
-}
-
-func releasePoolResources(crw *customResponseWriter, cp *ContextPayload) {
-	releaseCRW(crw)
-	releaseContext(cp)
-}
-
 // NewRouter initializes & returns a new router instance with all the configurations and routes set
 func NewRouter(cfg *Config, routes ...*Route) *Router {
 	r := &Router{
@@ -340,7 +328,7 @@ func NewRouter(cfg *Config, routes ...*Route) *Router {
 // checkDuplicateRoutes checks if any of the routes have duplicate name or URI pattern
 func checkDuplicateRoutes(idx int, route *Route, routes []*Route) {
 	// checking if the URI pattern is duplicated
-	for i := 0; i < idx; i++ {
+	for i := range idx {
 		rt := routes[i]
 
 		if rt.Name == route.Name {
@@ -380,13 +368,7 @@ func httpHandlers(routes []*Route) map[string][]*Route {
 	handlers[http.MethodGet] = []*Route{}
 
 	for idx, route := range routes {
-		found := false
-		for _, validMethod := range validHTTPMethods {
-			if route.Method == validMethod {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(validHTTPMethods, route.Method)
 
 		if !found {
 			LOGHANDLER.Fatal(

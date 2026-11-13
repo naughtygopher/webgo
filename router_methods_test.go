@@ -25,7 +25,6 @@ func TestRouterConvenienceMethods(t *testing.T) {
 	}
 
 	for _, tc := range methods {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			router := NewRouter(&Config{})

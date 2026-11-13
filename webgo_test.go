@@ -48,22 +48,33 @@ func TestResponseStatus(t *testing.T) {
 func TestStart(t *testing.T) {
 	t.Parallel()
 	router, _ := setup(t, "9696")
-	go router.Start()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		router.Start()
+	}()
 	time.Sleep(time.Second * 2)
 	err := router.Shutdown()
 	if err != nil {
 		t.Fatal(err)
 	}
+	// the goroutine reads LOGHANDLER, it should not outlive the test
+	<-done
 }
 func TestStartHTTPS(t *testing.T) {
 	t.Parallel()
 	router, _ := setup(t, "8443")
-	go router.StartHTTPS()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		router.StartHTTPS()
+	}()
 	time.Sleep(time.Second * 2)
 	err := router.ShutdownHTTPS()
 	if err != nil {
 		t.Fatal(err)
 	}
+	<-done
 }
 
 func TestErrorHandling(t *testing.T) {
@@ -94,8 +105,7 @@ func BenchmarkRouter(b *testing.B) {
 	base, _ := http.NewRequest(http.MethodGet, "/a/b/-/c/~/d/./e", nil)
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// ServeHTTP overwrites the request with a copy holding the webgo context,
 		// so the request is restored on every iteration to avoid nesting contexts
 		r := *base
@@ -104,5 +114,28 @@ func BenchmarkRouter(b *testing.B) {
 			b.Error("expected status 200, got", w.Result().StatusCode)
 			return
 		}
+	}
+}
+
+func TestContextOutlivesRequest(tt *testing.T) {
+	tt.Parallel()
+
+	router := NewRouter(
+		&Config{},
+		&Route{Name: "user", Method: http.MethodGet, Pattern: "/users/:id", Handlers: []http.HandlerFunc{dummyHandler}},
+		&Route{Name: "post", Method: http.MethodGet, Pattern: "/posts/:pid", Handlers: []http.HandlerFunc{dummyHandler}},
+	)
+
+	first := httptest.NewRequest(http.MethodGet, "/users/1", nil)
+	router.ServeHTTP(httptest.NewRecorder(), first)
+
+	// requests served after the first one returned must not reuse its context
+	for range 100 {
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/posts/2", nil))
+	}
+
+	cp := Context(first)
+	if cp.Route.Name != "user" || cp.Params()["id"] != "1" {
+		tt.Fatalf("expected route 'user' with id '1', got route %q with params %v", cp.Route.Name, cp.Params())
 	}
 }

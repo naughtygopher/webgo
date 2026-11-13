@@ -19,14 +19,14 @@ type ErrorData struct {
 
 // dOutput is the standard/valid output wrapped in `{data: <payload>, status: <http response status>}`
 type dOutput struct {
-	Data   interface{} `json:"data"`
-	Status int         `json:"status"`
+	Data   any `json:"data"`
+	Status int `json:"status"`
 }
 
 // errOutput is the error output wrapped in `{errors:<errors>, status: <http response status>}`
 type errOutput struct {
-	Errors interface{} `json:"errors"`
-	Status int         `json:"status"`
+	Errors any `json:"errors"`
+	Status int `json:"status"`
 }
 
 const (
@@ -57,7 +57,7 @@ func crwAsserter(w http.ResponseWriter, rCode int) http.ResponseWriter {
 
 // Send sends a completely custom response without wrapping in the
 // `{data: <data>, status: <int>` struct
-func Send(w http.ResponseWriter, contentType string, data interface{}, rCode int) {
+func Send(w http.ResponseWriter, contentType string, data any, rCode int) {
 	w = crwAsserter(w, rCode)
 	w.Header().Set(HeaderContentType, contentType)
 	_, err := fmt.Fprint(w, data)
@@ -69,7 +69,7 @@ func Send(w http.ResponseWriter, contentType string, data interface{}, rCode int
 }
 
 // SendResponse is used to respond to any request (JSON response) based on the code, data etc.
-func SendResponse(w http.ResponseWriter, data interface{}, rCode int) {
+func SendResponse(w http.ResponseWriter, data any, rCode int) {
 	w = crwAsserter(w, rCode)
 	w.Header().Set(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(dOutput{Data: data, Status: rCode})
@@ -85,7 +85,7 @@ func SendResponse(w http.ResponseWriter, data interface{}, rCode int) {
 }
 
 // SendError is used to respond to any request with an error
-func SendError(w http.ResponseWriter, data interface{}, rCode int) {
+func SendError(w http.ResponseWriter, data any, rCode int) {
 	w = crwAsserter(w, rCode)
 	w.Header().Set(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(errOutput{data, rCode})
@@ -101,7 +101,7 @@ func SendError(w http.ResponseWriter, data interface{}, rCode int) {
 }
 
 // Render is used for rendering templates (HTML)
-func Render(w http.ResponseWriter, data interface{}, rCode int, tpl *template.Template) {
+func Render(w http.ResponseWriter, data any, rCode int, tpl *template.Template) {
 	w = crwAsserter(w, rCode)
 
 	// In case of HTML response, setting appropriate header type for text/HTML response
@@ -116,12 +116,12 @@ func Render(w http.ResponseWriter, data interface{}, rCode int, tpl *template.Te
 }
 
 // R200 - Successful/OK response
-func R200(w http.ResponseWriter, data interface{}) {
+func R200(w http.ResponseWriter, data any) {
 	SendResponse(w, data, http.StatusOK)
 }
 
 // R201 - New item created
-func R201(w http.ResponseWriter, data interface{}) {
+func R201(w http.ResponseWriter, data any) {
 	SendResponse(w, data, http.StatusCreated)
 }
 
@@ -131,36 +131,36 @@ func R204(w http.ResponseWriter) {
 }
 
 // R302 - Temporary redirect
-func R302(w http.ResponseWriter, data interface{}) {
+func R302(w http.ResponseWriter, data any) {
 	SendResponse(w, data, http.StatusFound)
 }
 
 // R400 - Invalid request, any incorrect/erraneous value in the request body
-func R400(w http.ResponseWriter, data interface{}) {
+func R400(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusBadRequest)
 }
 
 // R403 - Forbidden, the client is not allowed to access the resource
-func R403(w http.ResponseWriter, data interface{}) {
+func R403(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusForbidden)
 }
 
 // R404 - Resource not found
-func R404(w http.ResponseWriter, data interface{}) {
+func R404(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusNotFound)
 }
 
 // R406 - Unacceptable header. For any error related to values set in header
-func R406(w http.ResponseWriter, data interface{}) {
+func R406(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusNotAcceptable)
 }
 
 // R451 - Resource taken down because of a legal request
-func R451(w http.ResponseWriter, data interface{}) {
+func R451(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusUnavailableForLegalReasons)
 }
 
 // R500 - Internal server error
-func R500(w http.ResponseWriter, data interface{}) {
+func R500(w http.ResponseWriter, data any) {
 	SendError(w, data, http.StatusInternalServerError)
 }

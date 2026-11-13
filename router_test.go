@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -223,7 +224,7 @@ func successHandler(w http.ResponseWriter, r *http.Request) {
 	params := wctx.Params()
 	R200(
 		w,
-		map[string]interface{}{
+		map[string]any{
 			"path":   r.URL.Path,
 			"params": params,
 		},
@@ -377,7 +378,7 @@ func testTable() []struct {
 	TestType  string
 	Path      string
 	Method    string
-	Want      interface{}
+	Want      any
 	WantErr   bool
 	Err       error
 	ParamKeys []string
@@ -389,7 +390,7 @@ func testTable() []struct {
 		TestType  string
 		Path      string
 		Method    string
-		Want      interface{}
+		Want      any
 		WantErr   bool
 		Err       error
 		ParamKeys []string
@@ -579,32 +580,49 @@ func testTable() []struct {
 	}
 }
 
+// testLogger is safe for concurrent use, since webgo logs from multiple goroutines
 type testLogger struct {
+	mu  sync.Mutex
 	out bytes.Buffer
 }
 
-func (tl *testLogger) Debug(data ...interface{}) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+func (tl *testLogger) write(data ...any) {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	fmt.Fprint(&tl.out, data...)
 }
-func (tl *testLogger) Info(data ...interface{}) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) String() string {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	return tl.out.String()
 }
-func (tl *testLogger) Warn(data ...interface{}) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) Reset() {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	tl.out.Reset()
 }
-func (tl *testLogger) Error(data ...interface{}) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
-}
-func (tl *testLogger) Fatal(data ...interface{}) {
-	tl.out.Write([]byte(fmt.Sprint(data...)))
+
+func (tl *testLogger) Debug(data ...any) { tl.write(data...) }
+func (tl *testLogger) Info(data ...any)  { tl.write(data...) }
+func (tl *testLogger) Warn(data ...any)  { tl.write(data...) }
+func (tl *testLogger) Error(data ...any) { tl.write(data...) }
+func (tl *testLogger) Fatal(data ...any) { tl.write(data...) }
+
+// useTestLogger swaps the global LOGHANDLER and restores it when the test ends.
+// LOGHANDLER is shared by all tests, hence tests using this must not be parallel.
+func useTestLogger(t *testing.T) *testLogger {
+	t.Helper()
+	tl := &testLogger{}
+	prev := LOGHANDLER
+	LOGHANDLER = tl
+	t.Cleanup(func() { LOGHANDLER = prev })
+	return tl
 }
 
 func Test_httpHandlers(t *testing.T) {
-	// t.Parallel()
-	tl := &testLogger{
-		out: bytes.Buffer{},
-	}
-	LOGHANDLER = tl
+	tl := useTestLogger(t)
 
 	// test invalid method
 	httpHandlers(
@@ -615,7 +633,7 @@ func Test_httpHandlers(t *testing.T) {
 				Method:  "HELLO",
 			},
 		})
-	got := tl.out.String()
+	got := tl.String()
 	want := "Unsupported HTTP method provided. Method: 'HELLO'"
 	if got != want {
 		t.Errorf(
@@ -624,7 +642,7 @@ func Test_httpHandlers(t *testing.T) {
 			got,
 		)
 	}
-	tl.out.Reset()
+	tl.Reset()
 
 	// test empty handlers
 	httpHandlers(
@@ -635,7 +653,7 @@ func Test_httpHandlers(t *testing.T) {
 				Method:  http.MethodGet,
 			},
 		})
-	str := tl.out.String()
+	str := tl.String()
 	want = "provided for the route '/hello/world', method 'GET'"
 	got = str[len(str)-len(want):]
 	if got != want {
@@ -645,7 +663,7 @@ func Test_httpHandlers(t *testing.T) {
 			got,
 		)
 	}
-	tl.out.Reset()
+	tl.Reset()
 }
 
 func TestWildcardMadness(t *testing.T) {
@@ -728,7 +746,7 @@ func (d *discardWriter) WriteHeader(int)             {}
 func benchRoutes(n int) (routes []*Route, uris []string) {
 	routes = make([]*Route, 0, n)
 	uris = make([]string, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		pattern := fmt.Sprintf("/static/%d", i)
 		uri := pattern
 		if i%2 == 1 {
@@ -772,8 +790,7 @@ func BenchmarkRouterRoutes(b *testing.B) {
 				base := httptest.NewRequest(http.MethodGet, c.uri, nil)
 
 				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					// ServeHTTP overwrites the request with a copy holding the webgo context
 					r := *base
 					router.ServeHTTP(w, &r)
