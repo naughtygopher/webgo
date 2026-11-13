@@ -581,3 +581,27 @@ func TestResponsehelpers(t *testing.T) {
 	}
 
 }
+
+func TestJSONContentTypeNotDuplicated(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]func(http.ResponseWriter){
+		"SendResponse": func(w http.ResponseWriter) { SendResponse(w, "ok", http.StatusOK) },
+		"SendError":    func(w http.ResponseWriter) { SendError(w, "err", http.StatusBadRequest) },
+	}
+
+	for name, send := range tests {
+		name, send := name, send
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rec := httptest.NewRecorder()
+			rec.Header().Set(HeaderContentType, "text/plain")
+			send(rec)
+
+			got := rec.Header().Values(HeaderContentType)
+			if len(got) != 1 || got[0] != JSONContentType {
+				t.Errorf("expected only %q, got %v", JSONContentType, got)
+			}
+		})
+	}
+}

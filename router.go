@@ -109,6 +109,12 @@ func (crw *customResponseWriter) Push(target string, opts *http.PushOptions) err
 	return errors.New("pusher not implemented")
 }
 
+// Unwrap returns the underlying http.ResponseWriter, used by http.ResponseController
+// to access optional interfaces (e.g. SetWriteDeadline, EnableFullDuplex)
+func (crw *customResponseWriter) Unwrap() http.ResponseWriter {
+	return crw.ResponseWriter
+}
+
 func (crw *customResponseWriter) reset() {
 	crw.statusCode = 0
 	crw.written = false

@@ -1,13 +1,12 @@
 <p align="center"><img src="https://user-images.githubusercontent.com/1092882/60883564-20142380-a268-11e9-988a-d98fb639adc6.png" alt="webgo gopher" width="256px"/></p>
 
 [![](https://github.com/naughtygopher/webgo/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/naughtygopher/webgo/actions)
-[![Go Reference](https://pkg.go.dev/badge/github.com/naughtygopher/webgo.svg)](https://pkg.go.dev/github.com/naughtygopher/webgo)
-[![Go Report Card](https://goreportcard.com/badge/github.com/naughtygopher/webgo)](https://goreportcard.com/report/github.com/naughtygopher/webgo)
+[![Go Reference](https://pkg.go.dev/badge/github.com/naughtygopher/webgo/v7.svg)](https://pkg.go.dev/github.com/naughtygopher/webgo/v7)
 [![Coverage Status](https://coveralls.io/repos/github/naughtygopher/webgo/badge.svg?branch=master)](https://coveralls.io/github/naughtygopher/webgo?branch=master)
 [![](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#web-frameworks)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/creativecreature/sturdyc/blob/master/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/naughtygopher/webgo/blob/master/LICENSE)
 
-# WebGo v7.0.4
+# WebGo v7
 
 WebGo is a minimalistic router for [Go](https://golang.org) to build web applications (server side) with no 3rd party dependencies. WebGo will always be Go standard library compliant; with the HTTP handlers having the same signature as [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc).
 
@@ -19,10 +18,11 @@ WebGo is a minimalistic router for [Go](https://golang.org) to build web applica
 4. [Error handling](https://github.com/naughtygopher/webgo#error-handling)
 5. [Helper functions](https://github.com/naughtygopher/webgo#helper-functions)
 6. [HTTPS ready](https://github.com/naughtygopher/webgo#https-ready)
-7. [Graceful shutdown](https://github.com/naughtygopher/webgo#graceful-shutdown)
-8. [Logging](https://github.com/naughtygopher/webgo#logging)
-9. [Server-Sent Events](https://github.com/naughtygopher/webgo#server-sent-events)
-10. [Usage](https://github.com/naughtygopher/webgo#usage)
+7. [Server timeouts](https://github.com/naughtygopher/webgo#server-timeouts)
+8. [Graceful shutdown](https://github.com/naughtygopher/webgo#graceful-shutdown)
+9. [Logging](https://github.com/naughtygopher/webgo#logging)
+10. [Server-Sent Events](https://github.com/naughtygopher/webgo#server-sent-events)
+11. [Usage](https://github.com/naughtygopher/webgo#usage)
 
 ## Router
 
@@ -31,15 +31,15 @@ Webgo has a simplistic, linear path matching router and supports defining [URI](
 1. `/api/users` - URI with no dynamic values
 2. `/api/users/:userID`
    - URI with a named parameter, `userID`
-   - If TrailingSlash is set to true, it will accept the URI ending with a '/', refer to [sample](https://github.com/naughtygopher/webgo#sample)
+   - If TrailingSlash is set to true, it will accept the URI ending with a '/' (it does not redirect), refer to the [sample](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go)
 3. `/api/users/:misc*`
    - Named URI parameter `misc`, with a wildcard suffix '\*'
    - This matches everything after `/api/users`. e.g. `/api/users/a/b/c/d`
 
 When there are multiple handlers matching the same URI, only the first occurring handler will handle the request.
-Refer to the [sample](https://github.com/naughtygopher/webgo#sample) to see how routes are configured. You can access named parameters of the URI using the `Context` function.
+Refer to the [sample](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go) to see how routes are configured. You can access named parameters of the URI using the `Context` function.
 
-Note: webgo Context is **not** available inside the special handlers (not found & method not implemented)
+Note: webgo Context is **not** available inside the special handlers (not found & method not implemented). Calling `webgo.Context(r)` there panics
 
 ```golang
 func helloWorld(w http.ResponseWriter, r *http.Request) {
@@ -62,15 +62,15 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 
 ## Handler chaining
 
-Handler chaining lets you execute multiple handlers for a given route. Execution of a chain can be configured to run even after a handler has written a response to the HTTP request, if you set `FallThroughPostResponse` to `true` (refer [sample](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L70)).
+Handler chaining lets you execute multiple handlers for a given route. Execution of a chain can be configured to run even after a handler has written a response to the HTTP request, if you set `FallThroughPostResponse` to `true` (refer to the `api` route in the [sample](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go)).
 
 ## Middleware
 
-WebGo [middlware](https://godoc.org/github.com/naughtygopher/webgo#Middleware) lets you wrap all the routes with a middleware unlike handler chaining. The router exposes a method [Use](https://godoc.org/github.com/naughtygopher/webgo#Router.Use) && [UseOnSpecialHandlers](https://godoc.org/github.com/naughtygopher/webgo#Router.UseOnSpecialHandlers) to add a Middleware to the router.
+WebGo [middleware](https://pkg.go.dev/github.com/naughtygopher/webgo/v7#Middleware) lets you wrap all the routes with a middleware unlike handler chaining. The router exposes a method [Use](https://pkg.go.dev/github.com/naughtygopher/webgo/v7#Router.Use) && [UseOnSpecialHandlers](https://pkg.go.dev/github.com/naughtygopher/webgo/v7#Router.UseOnSpecialHandlers) to add a Middleware to the router.
 
-NotFound && NotImplemented are considered `Special` handlers. `webgo.Context(r)` within special handlers will return `nil`.
+NotFound && NotImplemented are considered `Special` handlers. `webgo.Context(r)` within special handlers panics, as there is no webgo context.
 
-Any number of middleware can be added to the router, the order of execution of middleware would be [LIFO](<https://en.wikipedia.org/wiki/Stack_(abstract_data_type)>) (Last In First Out). i.e. in case of the following code
+Any number of middleware can be added to the router. By default, middleware are executed in the order they were added, i.e. in case of the following code
 
 ```golang
 func main() {
@@ -79,15 +79,17 @@ func main() {
 }
 ```
 
-**_CorsWrap_** would be executed first, followed by **_AccessLog_**.
+**_AccessLog_** would be executed first, followed by **_CORS_**, followed by the middleware added after. If `ReverseMiddleware` is set to `true` in `Config`, the order is reversed (last added executes first).
+
+`Use` applies only to the routes which are already added to the router, so call it after all the routes are added. If you pass the router to your own `http.Server` instead of using `router.Start()` or `router.StartHTTPS()`, call `router.SetupMiddleware()` once before serving, otherwise the middleware are not applied.
 
 ## Error handling
 
-Webgo context has 2 methods to [set](https://github.com/naughtygopher/webgo/blob/master/webgo.go#L60) & [get](https://github.com/naughtygopher/webgo/blob/master/webgo.go#L66) erro within a request context. It enables Webgo to implement a single middleware where you can handle error returned within an HTTP handler. [set error](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L45), [get error](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go#L51).
+Webgo context has 2 methods, `SetError` & `Error` (also available as the helpers `webgo.SetError(r, err)` & `webgo.GetError(r)`), to set & get an error within a request context. It enables Webgo to implement a single middleware where you can handle errors returned within an HTTP handler. Refer to `errLogger` in [main.go](https://github.com/naughtygopher/webgo/blob/master/cmd/main.go) & `ErrorSetterHandler` in [handlers.go](https://github.com/naughtygopher/webgo/blob/master/cmd/handlers.go) of the sample for an example.
 
 ## Helper functions
 
-WebGo provides a few helper functions. When using `Send` or `SendResponse` (other Rxxx responder functions), the response is wrapped in WebGo's [response struct](https://github.com/naughtygopher/webgo/blob/master/responses.go#L17) and is serialized as JSON.
+WebGo provides a few helper functions. When using `SendResponse` (or the other `Rxxx` responder functions, e.g. `R200`), the response is wrapped in WebGo's response struct and is serialized as JSON. `Send` is the exception, it writes the data as is, with the content type you provide.
 
 ```json
 {
@@ -96,7 +98,7 @@ WebGo provides a few helper functions. When using `Send` or `SendResponse` (othe
 }
 ```
 
-When using `SendError`, the response is wrapped in WebGo's [error response struct](https://github.com/naughtygopher/webgo/blob/master/responses.go#L23) and is serialzied as JSON.
+When using `SendError` (or the error responders, e.g. `R400`, `R500`), the response is wrapped in WebGo's error response struct and is serialized as JSON.
 
 ```json
 {
@@ -137,6 +139,18 @@ go router.StartHTTPS()
 router.Start()
 ```
 
+## Server timeouts
+
+`ReadTimeout`, `ReadHeaderTimeout`, `WriteTimeout` & `IdleTimeout` of `Config` are passed on to the underlying `http.Server`. None of them are enabled unless set. It is recommended to set `ReadHeaderTimeout` (or `ReadTimeout`) when the server is exposed to the internet, to protect against slow clients holding connections open.
+
+```golang
+cfg := &webgo.Config{
+	Port:              "8080",
+	ReadHeaderTimeout: 5 * time.Second,
+	IdleTimeout:       120 * time.Second,
+}
+```
+
 ## Graceful shutdown
 
 Graceful shutdown lets you shutdown the server without affecting any live connections/clients connected to the server. Any new connection request after initiating a shutdown would be ignored.
@@ -156,6 +170,7 @@ func main() {
 	}
 	router := webgo.NewRouter(cfg, routes()...)
 
+	signal.Notify(osSig, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-osSig
 		// Initiate HTTP server shutdown
@@ -179,26 +194,21 @@ func main() {
 		// }
 	}()
 
-	go func(){
-		time.Sleep(time.Second*15)
-		signal.Notify(osSig, os.Interrupt, syscall.SIGTERM)
-	}()
-
 	router.Start()
 }
 ```
 
 ## Logging
 
-WebGo exposes a singleton & global scoped logger variable [LOGHANDLER](https://godoc.org/github.com/naughtygopher/webgo#Logger) with which you can plug in your custom logger by implementing the [Logger](https://godoc.org/github.com/naughtygopher/webgo#Logger) interface.
+WebGo exposes a singleton & global scoped logger variable [LOGHANDLER](https://pkg.go.dev/github.com/naughtygopher/webgo/v7#LOGHANDLER) with which you can plug in your custom logger by implementing the [Logger](https://pkg.go.dev/github.com/naughtygopher/webgo/v7#Logger) interface.
 
 ### Configuring the default Logger
 
-The default logger uses Go standard library's `log.Logger` with `os.Stdout` (for debug and info logs) & `os.Stderr` (for warning, error, fatal) as default io.Writers. You can set the io.Writer as well as disable specific types of logs using the `GlobalLoggerConfig(stdout, stderr, cfgs...)` function.
+The default logger uses Go standard library's `log.Logger` with `os.Stdout` (for debug and info logs) & `os.Stderr` (for warning, error, fatal) as default io.Writers. You can set the io.Writer as well as disable specific types of logs using the `GlobalLoggerConfig(stdout, stderr, cfgs...)` function. It is not safe for concurrent use, so call it once, at startup.
 
 ## Server-Sent Events
 
-[MDN has a very good documentation of what SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) are. The sample app provided shows how to use the SSE extension of webgo.
+[MDN has a very good documentation of what SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) are. The SSE extension (`github.com/naughtygopher/webgo/v7/extensions/sse`) works with any `net/http` server, it is not limited to webgo. The sample app provided shows how to use it with webgo.
 
 ## Usage
 

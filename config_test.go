@@ -2,6 +2,7 @@ package webgo
 
 import (
 	"bytes"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -95,4 +96,36 @@ func TestConfig_Validate(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSetupServerTimeouts(t *testing.T) {
+	t.Parallel()
+
+	cfg := &Config{
+		Port:              "9000",
+		ReadTimeout:       1 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		WriteTimeout:      3 * time.Second,
+		IdleTimeout:       4 * time.Second,
+	}
+	router := NewRouter(cfg)
+	router.setupServer()
+
+	for name, srv := range map[string]*http.Server{"http": router.httpServer, "https": router.httpsServer} {
+		if srv.ReadTimeout != cfg.ReadTimeout ||
+			srv.ReadHeaderTimeout != cfg.ReadHeaderTimeout ||
+			srv.WriteTimeout != cfg.WriteTimeout ||
+			srv.IdleTimeout != cfg.IdleTimeout {
+			t.Errorf("%s server timeouts do not match config: %+v", name, srv)
+		}
+	}
+
+	// timeouts are disabled unless set
+	router = NewRouter(&Config{Port: "9000"})
+	router.setupServer()
+	for name, srv := range map[string]*http.Server{"http": router.httpServer, "https": router.httpsServer} {
+		if srv.ReadHeaderTimeout != 0 || srv.IdleTimeout != 0 {
+			t.Errorf("%s server has unexpected default timeouts", name)
+		}
+	}
 }

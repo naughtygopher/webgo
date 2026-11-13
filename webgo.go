@@ -88,19 +88,23 @@ func ResponseStatus(rw http.ResponseWriter) int {
 func (router *Router) setupServer() {
 	cfg := router.config
 	router.httpsServer = &http.Server{
-		Addr:         "",
-		Handler:      router,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
+		Addr:              "",
+		Handler:           router,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify: cfg.InsecureSkipVerify,
 		},
 	}
 	router.httpServer = &http.Server{
-		Addr:         "",
-		Handler:      router,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
+		Addr:              "",
+		Handler:           router,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
 	}
 	router.SetupMiddleware()
 }

@@ -71,7 +71,7 @@ func Send(w http.ResponseWriter, contentType string, data interface{}, rCode int
 // SendResponse is used to respond to any request (JSON response) based on the code, data etc.
 func SendResponse(w http.ResponseWriter, data interface{}, rCode int) {
 	w = crwAsserter(w, rCode)
-	w.Header().Add(HeaderContentType, JSONContentType)
+	w.Header().Set(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(dOutput{Data: data, Status: rCode})
 	if err == nil {
 		return
@@ -87,7 +87,7 @@ func SendResponse(w http.ResponseWriter, data interface{}, rCode int) {
 // SendError is used to respond to any request with an error
 func SendError(w http.ResponseWriter, data interface{}, rCode int) {
 	w = crwAsserter(w, rCode)
-	w.Header().Add(HeaderContentType, JSONContentType)
+	w.Header().Set(HeaderContentType, JSONContentType)
 	err := json.NewEncoder(w).Encode(errOutput{data, rCode})
 	if err == nil {
 		return
@@ -140,7 +140,7 @@ func R400(w http.ResponseWriter, data interface{}) {
 	SendError(w, data, http.StatusBadRequest)
 }
 
-// R403 - Unauthorized access
+// R403 - Forbidden, the client is not allowed to access the resource
 func R403(w http.ResponseWriter, data interface{}) {
 	SendError(w, data, http.StatusForbidden)
 }
