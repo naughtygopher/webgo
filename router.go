@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
 )
 
@@ -47,12 +48,12 @@ var (
 	}
 
 	ctxPool = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return new(ContextPayload)
 		},
 	}
 	crwPool = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return new(customResponseWriter)
 		},
 	}
@@ -340,7 +341,7 @@ func NewRouter(cfg *Config, routes ...*Route) *Router {
 // checkDuplicateRoutes checks if any of the routes have duplicate name or URI pattern
 func checkDuplicateRoutes(idx int, route *Route, routes []*Route) {
 	// checking if the URI pattern is duplicated
-	for i := 0; i < idx; i++ {
+	for i := range idx {
 		rt := routes[i]
 
 		if rt.Name == route.Name {
@@ -380,13 +381,7 @@ func httpHandlers(routes []*Route) map[string][]*Route {
 	handlers[http.MethodGet] = []*Route{}
 
 	for idx, route := range routes {
-		found := false
-		for _, validMethod := range validHTTPMethods {
-			if route.Method == validMethod {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(validHTTPMethods, route.Method)
 
 		if !found {
 			LOGHANDLER.Fatal(

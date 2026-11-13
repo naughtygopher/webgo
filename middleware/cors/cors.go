@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -93,13 +94,7 @@ func allowedMethods(routes []*webgo.Route) string {
 
 	methods := make([]string, 0, len(routes))
 	for _, r := range routes {
-		found := false
-		for _, m := range methods {
-			if m == r.Method {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(methods, r.Method)
 		if found {
 			continue
 		}

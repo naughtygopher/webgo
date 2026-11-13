@@ -67,7 +67,7 @@ func BenchmarkMatchWithWildcard(b *testing.B) {
 		return
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ok, _ := route.matchPath(uri)
 		if !ok {
 			b.Errorf("Expected match, got no match")
@@ -264,7 +264,6 @@ func TestMatchPath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			route := Route{

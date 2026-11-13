@@ -3,6 +3,7 @@ package webgo
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -94,8 +95,7 @@ func (r *Route) setupMiddleware(reverse bool) {
 			}
 		}
 	} else {
-		for i := len(r.middlewarelist) - 1; i >= 0; i-- {
-			m := r.middlewarelist[i]
+		for _, m := range slices.Backward(r.middlewarelist) {
 			srv := r.serve
 			r.serve = func(rw http.ResponseWriter, req *http.Request) {
 				m(rw, req, srv)

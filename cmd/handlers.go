@@ -136,7 +136,7 @@ func ParamHandler(w http.ResponseWriter, r *http.Request) {
 	route := wctx.Route
 	webgo.R200(
 		w,
-		map[string]interface{}{
+		map[string]any{
 			"route_name":    route.Name,
 			"route_pattern": route.Pattern,
 			"params":        params,

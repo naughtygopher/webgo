@@ -94,8 +94,7 @@ func BenchmarkRouter(b *testing.B) {
 	base, _ := http.NewRequest(http.MethodGet, "/a/b/-/c/~/d/./e", nil)
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// ServeHTTP overwrites the request with a copy holding the webgo context,
 		// so the request is restored on every iteration to avoid nesting contexts
 		r := *base

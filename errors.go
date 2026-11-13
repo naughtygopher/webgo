@@ -31,11 +31,11 @@ const (
 
 // Logger defines all the logging methods to be implemented
 type Logger interface {
-	Debug(data ...interface{})
-	Info(data ...interface{})
-	Warn(data ...interface{})
-	Error(data ...interface{})
-	Fatal(data ...interface{})
+	Debug(data ...any)
+	Info(data ...any)
+	Warn(data ...any)
+	Error(data ...any)
+	Fatal(data ...any)
 }
 
 // logHandler has all the log writer handlers
@@ -48,7 +48,7 @@ type logHandler struct {
 }
 
 // Debug prints log of severity 5
-func (lh *logHandler) Debug(data ...interface{}) {
+func (lh *logHandler) Debug(data ...any) {
 	if lh.debug == nil {
 		return
 	}
@@ -56,7 +56,7 @@ func (lh *logHandler) Debug(data ...interface{}) {
 }
 
 // Info prints logs of severity 4
-func (lh *logHandler) Info(data ...interface{}) {
+func (lh *logHandler) Info(data ...any) {
 	if lh.info == nil {
 		return
 	}
@@ -64,7 +64,7 @@ func (lh *logHandler) Info(data ...interface{}) {
 }
 
 // Warn prints log of severity 3
-func (lh *logHandler) Warn(data ...interface{}) {
+func (lh *logHandler) Warn(data ...any) {
 	if lh.warn == nil {
 		return
 	}
@@ -72,7 +72,7 @@ func (lh *logHandler) Warn(data ...interface{}) {
 }
 
 // Error prints log of severity 2
-func (lh *logHandler) Error(data ...interface{}) {
+func (lh *logHandler) Error(data ...any) {
 	if lh.err == nil {
 		return
 	}
@@ -80,7 +80,7 @@ func (lh *logHandler) Error(data ...interface{}) {
 }
 
 // Fatal prints log of severity 1
-func (lh *logHandler) Fatal(data ...interface{}) {
+func (lh *logHandler) Fatal(data ...any) {
 	if lh.fatal == nil {
 		return
 	}

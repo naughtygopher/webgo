@@ -591,7 +591,6 @@ func TestJSONContentTypeNotDuplicated(t *testing.T) {
 	}
 
 	for name, send := range tests {
-		name, send := name, send
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			rec := httptest.NewRecorder()

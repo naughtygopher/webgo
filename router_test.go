@@ -223,7 +223,7 @@ func successHandler(w http.ResponseWriter, r *http.Request) {
 	params := wctx.Params()
 	R200(
 		w,
-		map[string]interface{}{
+		map[string]any{
 			"path":   r.URL.Path,
 			"params": params,
 		},
@@ -377,7 +377,7 @@ func testTable() []struct {
 	TestType  string
 	Path      string
 	Method    string
-	Want      interface{}
+	Want      any
 	WantErr   bool
 	Err       error
 	ParamKeys []string
@@ -389,7 +389,7 @@ func testTable() []struct {
 		TestType  string
 		Path      string
 		Method    string
-		Want      interface{}
+		Want      any
 		WantErr   bool
 		Err       error
 		ParamKeys []string
@@ -583,19 +583,19 @@ type testLogger struct {
 	out bytes.Buffer
 }
 
-func (tl *testLogger) Debug(data ...interface{}) {
+func (tl *testLogger) Debug(data ...any) {
 	tl.out.Write([]byte(fmt.Sprint(data...)))
 }
-func (tl *testLogger) Info(data ...interface{}) {
+func (tl *testLogger) Info(data ...any) {
 	tl.out.Write([]byte(fmt.Sprint(data...)))
 }
-func (tl *testLogger) Warn(data ...interface{}) {
+func (tl *testLogger) Warn(data ...any) {
 	tl.out.Write([]byte(fmt.Sprint(data...)))
 }
-func (tl *testLogger) Error(data ...interface{}) {
+func (tl *testLogger) Error(data ...any) {
 	tl.out.Write([]byte(fmt.Sprint(data...)))
 }
-func (tl *testLogger) Fatal(data ...interface{}) {
+func (tl *testLogger) Fatal(data ...any) {
 	tl.out.Write([]byte(fmt.Sprint(data...)))
 }
 
@@ -728,7 +728,7 @@ func (d *discardWriter) WriteHeader(int)             {}
 func benchRoutes(n int) (routes []*Route, uris []string) {
 	routes = make([]*Route, 0, n)
 	uris = make([]string, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		pattern := fmt.Sprintf("/static/%d", i)
 		uri := pattern
 		if i%2 == 1 {
@@ -772,8 +772,7 @@ func BenchmarkRouterRoutes(b *testing.B) {
 				base := httptest.NewRequest(http.MethodGet, c.uri, nil)
 
 				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					// ServeHTTP overwrites the request with a copy holding the webgo context
 					r := *base
 					router.ServeHTTP(w, &r)
