@@ -91,9 +91,15 @@ func BenchmarkRouter(b *testing.B) {
 		return
 	}
 	w := httptest.NewRecorder()
-	r, _ := http.NewRequest(http.MethodGet, "/a/b/-/c/~/d/./e", nil)
+	base, _ := http.NewRequest(http.MethodGet, "/a/b/-/c/~/d/./e", nil)
+
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		router.ServeHTTP(w, r)
+		// ServeHTTP overwrites the request with a copy holding the webgo context,
+		// so the request is restored on every iteration to avoid nesting contexts
+		r := *base
+		router.ServeHTTP(w, &r)
 		if w.Result().StatusCode != http.StatusOK {
 			b.Error("expected status 200, got", w.Result().StatusCode)
 			return

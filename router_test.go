@@ -715,3 +715,70 @@ func TestWildcardMadness(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+type discardWriter struct {
+	header http.Header
+}
+
+func (d *discardWriter) Header() http.Header         { return d.header }
+func (d *discardWriter) Write(p []byte) (int, error) { return len(p), nil }
+func (d *discardWriter) WriteHeader(int)             {}
+
+// benchRoutes returns n GET routes, alternating between static and parameterised patterns
+func benchRoutes(n int) (routes []*Route, uris []string) {
+	routes = make([]*Route, 0, n)
+	uris = make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		pattern := fmt.Sprintf("/static/%d", i)
+		uri := pattern
+		if i%2 == 1 {
+			pattern = fmt.Sprintf("/users/%d/:id/posts/:pid", i)
+			uri = fmt.Sprintf("/users/%d/42/posts/7", i)
+		}
+		routes = append(routes, &Route{
+			Name:     fmt.Sprintf("route-%d", i),
+			Method:   http.MethodGet,
+			Pattern:  pattern,
+			Handlers: []http.HandlerFunc{dummyHandler},
+		})
+		uris = append(uris, uri)
+	}
+	return routes, uris
+}
+
+func BenchmarkRouterRoutes(b *testing.B) {
+	GlobalLoggerConfig(nil, nil, LogCfgDisableDebug, LogCfgDisableInfo, LogCfgDisableWarn)
+
+	for _, n := range []int{10, 100, 500} {
+		routes, uris := benchRoutes(n)
+		router := NewRouter(&Config{}, routes...)
+		router.NotFound = dummyHandler
+		router.SetupMiddleware()
+
+		cases := []struct {
+			name string
+			uri  string
+		}{
+			{"first", uris[0]},
+			{"middle_static", uris[(n/2)&^1]},
+			{"middle_param", uris[(n/2)|1]},
+			{"last", uris[n-1]},
+			{"miss", "/does/not/exist"},
+		}
+
+		for _, c := range cases {
+			b.Run(fmt.Sprintf("routes=%d/%s", n, c.name), func(b *testing.B) {
+				w := &discardWriter{header: http.Header{}}
+				base := httptest.NewRequest(http.MethodGet, c.uri, nil)
+
+				b.ReportAllocs()
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					// ServeHTTP overwrites the request with a copy holding the webgo context
+					r := *base
+					router.ServeHTTP(w, &r)
+				}
+			})
+		}
+	}
+}
