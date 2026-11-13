@@ -2,7 +2,6 @@
 
 [![](https://github.com/naughtygopher/webgo/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/naughtygopher/webgo/actions)
 [![Go Reference](https://pkg.go.dev/badge/github.com/naughtygopher/webgo/v7.svg)](https://pkg.go.dev/github.com/naughtygopher/webgo/v7)
-[![Go Report Card](https://goreportcard.com/badge/github.com/naughtygopher/webgo)](https://goreportcard.com/report/github.com/naughtygopher/webgo)
 [![Coverage Status](https://coveralls.io/repos/github/naughtygopher/webgo/badge.svg?branch=master)](https://coveralls.io/github/naughtygopher/webgo?branch=master)
 [![](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#web-frameworks)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/naughtygopher/webgo/blob/master/LICENSE)
