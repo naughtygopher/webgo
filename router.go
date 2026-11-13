@@ -156,6 +156,9 @@ type Router struct {
 	// config has all the app config
 	config *Config
 
+	// srvMu guards httpServer & httpsServer, since Start/StartHTTPS usually run in
+	// their own goroutine while Shutdown/ShutdownHTTPS are called from another
+	srvMu sync.Mutex
 	// httpServer is the server handler for the active HTTP server
 	httpServer *http.Server
 	// httpsServer is the server handler for the active HTTPS server

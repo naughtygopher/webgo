@@ -87,6 +87,10 @@ func ResponseStatus(rw http.ResponseWriter) int {
 }
 func (router *Router) setupServer() {
 	cfg := router.config
+
+	router.srvMu.Lock()
+	defer router.srvMu.Unlock()
+
 	router.httpsServer = &http.Server{
 		Addr:              "",
 		Handler:           router,
@@ -139,10 +143,14 @@ func (router *Router) StartHTTPS() {
 	if len(cfg.HTTPSPort) > 0 {
 		host += ":" + cfg.HTTPSPort
 	}
-	router.httpsServer.Addr = host
 
-	LOGHANDLER.Info("HTTPS server, listening on", router.httpsServer.Addr)
-	err := router.httpsServer.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
+	router.srvMu.Lock()
+	srv := router.httpsServer
+	srv.Addr = host
+	router.srvMu.Unlock()
+
+	LOGHANDLER.Info("HTTPS server, listening on", host)
+	err := srv.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 	if err != nil && err != http.ErrServerClosed {
 		LOGHANDLER.Error("HTTPS server exited with error:", err.Error())
 	}
@@ -157,10 +165,14 @@ func (router *Router) Start() {
 	if len(cfg.Port) > 0 {
 		host += ":" + cfg.Port
 	}
-	router.httpServer.Addr = host
 
-	LOGHANDLER.Info("HTTP server, listening on", router.httpServer.Addr)
-	err := router.httpServer.ListenAndServe()
+	router.srvMu.Lock()
+	srv := router.httpServer
+	srv.Addr = host
+	router.srvMu.Unlock()
+
+	LOGHANDLER.Info("HTTP server, listening on", host)
+	err := srv.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		LOGHANDLER.Error("HTTP server exited with error:", err.Error())
 	}
@@ -168,7 +180,10 @@ func (router *Router) Start() {
 
 // Shutdown gracefully shuts down HTTP server
 func (router *Router) Shutdown() error {
-	if router.httpServer == nil {
+	router.srvMu.Lock()
+	srv := router.httpServer
+	router.srvMu.Unlock()
+	if srv == nil {
 		return nil
 	}
 	timer := router.config.ShutdownTimeout
@@ -176,7 +191,7 @@ func (router *Router) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.TODO(), timer)
 	defer cancel()
 
-	err := router.httpServer.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
 	if err != nil {
 		LOGHANDLER.Error(err)
 	}
@@ -185,7 +200,10 @@ func (router *Router) Shutdown() error {
 
 // ShutdownHTTPS gracefully shuts down HTTPS server
 func (router *Router) ShutdownHTTPS() error {
-	if router.httpsServer == nil {
+	router.srvMu.Lock()
+	srv := router.httpsServer
+	router.srvMu.Unlock()
+	if srv == nil {
 		return nil
 	}
 	timer := router.config.ShutdownTimeout
@@ -193,7 +211,7 @@ func (router *Router) ShutdownHTTPS() error {
 	ctx, cancel := context.WithTimeout(context.TODO(), timer)
 	defer cancel()
 
-	err := router.httpsServer.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
 	if err != nil && err != http.ErrServerClosed {
 		LOGHANDLER.Error(err)
 	}
