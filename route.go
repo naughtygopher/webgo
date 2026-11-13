@@ -29,6 +29,9 @@ type Route struct {
 	hasWildcard bool
 	fragments   []uriFragment
 	paramsCount int
+	// staticPrefix is the part of the pattern before the first fragment with a
+	// parameter or wildcard, always ending with '/'. e.g. '/users/:id/posts' has '/users/'
+	staticPrefix string
 
 	// skipMiddleware if true, middleware added using `router` will not be applied to this Route.
 	// This is used only when a Route is set using the RouteGroup, which can have its own set of middleware
@@ -83,6 +86,17 @@ func (r *Route) parseURIWithParams() {
 			})
 	}
 	r.fragments = rFragments
+
+	if strings.HasPrefix(r.Pattern, "/") {
+		prefixEnd := 1
+		for _, fragment := range fragments[1:] {
+			if strings.ContainsAny(fragment, ":*") {
+				break
+			}
+			prefixEnd += len(fragment) + 1
+		}
+		r.staticPrefix = r.Pattern[:prefixEnd]
+	}
 }
 
 func (r *Route) setupMiddleware(reverse bool) {
@@ -139,6 +153,14 @@ func (r *Route) matchPath(requestURI string) (bool, map[string]string) {
 	return r.matchWithWildcard(requestURI)
 }
 
+// maxStackParams is the number of URI parameters collected without a heap allocation
+const maxStackParams = 8
+
+type paramValue struct {
+	value string
+	isSet bool
+}
+
 func (r *Route) matchWithWildcard(requestURI string) (bool, map[string]string) {
 	// if r.fragments is empty, it means there are no variables in the URI pattern
 	// hence no point checking
@@ -146,14 +168,44 @@ func (r *Route) matchWithWildcard(requestURI string) (bool, map[string]string) {
 		return false, nil
 	}
 
-	params := make(map[string]string, r.paramsCount)
-	uriFragments := strings.Split(requestURI, "/")[1:]
+	// most misses are rejected here, without any allocation
+	if !strings.HasPrefix(requestURI, r.staticPrefix) {
+		return false, nil
+	}
+
+	// the first fragment starts after the first '/'. It is index 0 for every URI
+	// received by net/http
+	pos := strings.IndexByte(requestURI, '/') + 1
+	if pos == 0 {
+		return false, nil
+	}
+
+	// values are collected per pattern fragment, and the map is built only after the
+	// whole URI matched. Hence a miss, even after a few fragments matched, allocates nothing.
+	var stackValues [maxStackParams]paramValue
+	values := stackValues[:]
+	if len(r.fragments) > maxStackParams {
+		values = make([]paramValue, len(r.fragments))
+	}
+	values = values[:len(r.fragments)]
+
 	fragmentsLastIdx := len(r.fragments) - 1
 	fragmentIdx := 0
-	uriParameter := make([]string, 0, len(uriFragments))
+	// the request URI is walked in place. A parameter's value is always a contiguous
+	// part of the URI (a wildcard spans multiple fragments), so it is a substring
+	// starting at valueStart instead of a joined copy of the fragments.
+	valueStart := pos
 
-	for idx, fragment := range uriFragments {
-		// if part is empty, it means it's end of URI with trailing slash
+	for pos < len(requestURI) {
+		fragmentStart := pos
+		fragmentEnd := len(requestURI)
+		if i := strings.IndexByte(requestURI[pos:], '/'); i >= 0 {
+			fragmentEnd = pos + i
+		}
+		pos = fragmentEnd + 1
+
+		fragment := requestURI[fragmentStart:fragmentEnd]
+		// if fragment is empty, it means it's end of URI with trailing slash
 		if fragment == "" {
 			break
 		}
@@ -167,13 +219,12 @@ func (r *Route) matchWithWildcard(requestURI string) (bool, map[string]string) {
 			return false, nil
 		}
 
-		uriParameter = append(uriParameter, fragment)
 		if currentFragment.isVariable {
-			params[currentFragment.fragment] = strings.Join(uriParameter, "/")
+			values[fragmentIdx] = paramValue{value: requestURI[valueStart:fragmentEnd], isSet: true}
 		}
 
 		if !currentFragment.hasWildcard {
-			uriParameter = make([]string, 0, len(uriFragments)-idx)
+			valueStart = pos
 			fragmentIdx++
 			continue
 		}
@@ -187,10 +238,32 @@ func (r *Route) matchWithWildcard(requestURI string) (bool, map[string]string) {
 		// if the URI has more fragments/params after wildcard,
 		// the immediately following part after wildcard cannot be a variable or another wildcard.
 		if !nextPart.isVariable && nextPart.fragment == fragment {
-			// remove the last added 'part' from parameters, as it's part of the static URI
-			params[currentFragment.fragment] = strings.Join(uriParameter[:len(uriParameter)-1], "/")
-			uriParameter = make([]string, 0, len(uriFragments)-idx)
+			// the last fragment is part of the static URI, not the wildcard's value
+			value := ""
+			if valueStart < fragmentStart {
+				value = requestURI[valueStart : fragmentStart-1]
+			}
+			values[fragmentIdx] = paramValue{value: value, isSet: true}
+			valueStart = pos
 			fragmentIdx += 2
+		}
+	}
+
+	setCount := 0
+	for _, val := range values {
+		if val.isSet {
+			setCount++
+		}
+	}
+	// distinct parameter names can only be fewer than the values set
+	if setCount < r.paramsCount {
+		return false, nil
+	}
+
+	params := make(map[string]string, r.paramsCount)
+	for idx, val := range values {
+		if val.isSet {
+			params[r.fragments[idx].fragment] = val.value
 		}
 	}
 
