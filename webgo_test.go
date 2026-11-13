@@ -105,3 +105,26 @@ func BenchmarkRouter(b *testing.B) {
 		}
 	}
 }
+
+func TestContextOutlivesRequest(tt *testing.T) {
+	tt.Parallel()
+
+	router := NewRouter(
+		&Config{},
+		&Route{Name: "user", Method: http.MethodGet, Pattern: "/users/:id", Handlers: []http.HandlerFunc{dummyHandler}},
+		&Route{Name: "post", Method: http.MethodGet, Pattern: "/posts/:pid", Handlers: []http.HandlerFunc{dummyHandler}},
+	)
+
+	first := httptest.NewRequest(http.MethodGet, "/users/1", nil)
+	router.ServeHTTP(httptest.NewRecorder(), first)
+
+	// requests served after the first one returned must not reuse its context
+	for range 100 {
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/posts/2", nil))
+	}
+
+	cp := Context(first)
+	if cp.Route.Name != "user" || cp.Params()["id"] != "1" {
+		tt.Fatalf("expected route 'user' with id '1', got route %q with params %v", cp.Route.Name, cp.Params())
+	}
+}

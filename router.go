@@ -47,11 +47,6 @@ var (
 		http.MethodDelete,
 	}
 
-	ctxPool = &sync.Pool{
-		New: func() any {
-			return new(ContextPayload)
-		},
-	}
 	crwPool = &sync.Pool{
 		New: func() any {
 			return new(customResponseWriter)
@@ -212,9 +207,12 @@ func (rtr *Router) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctxPayload := newContext()
-	ctxPayload.Route = route
-	ctxPayload.URIParams = params
+	// ContextPayload is not pooled, since handlers can keep a reference to it (e.g. in
+	// a goroutine) which outlives this call
+	ctxPayload := &ContextPayload{
+		Route:     route,
+		URIParams: params,
+	}
 
 	// webgo context is injected to the HTTP request context
 	*r = *r.WithContext(
@@ -225,7 +223,7 @@ func (rtr *Router) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		),
 	)
 
-	defer releasePoolResources(crw, ctxPayload)
+	defer releaseCRW(crw)
 	route.serve(crw, r)
 }
 
@@ -310,20 +308,6 @@ func newCRW(rw http.ResponseWriter, rCode int) *customResponseWriter {
 func releaseCRW(crw *customResponseWriter) {
 	crw.reset()
 	crwPool.Put(crw)
-}
-
-func newContext() *ContextPayload {
-	return ctxPool.Get().(*ContextPayload)
-}
-
-func releaseContext(cp *ContextPayload) {
-	cp.reset()
-	ctxPool.Put(cp)
-}
-
-func releasePoolResources(crw *customResponseWriter, cp *ContextPayload) {
-	releaseCRW(crw)
-	releaseContext(cp)
 }
 
 // NewRouter initializes & returns a new router instance with all the configurations and routes set

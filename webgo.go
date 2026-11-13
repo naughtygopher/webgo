@@ -45,11 +45,6 @@ func (cp *ContextPayload) Params() map[string]string {
 	return cp.URIParams
 }
 
-func (cp *ContextPayload) reset() {
-	cp.Route = nil
-	cp.Err = nil
-}
-
 // SetError sets the err within the context
 func (cp *ContextPayload) SetError(err error) {
 	cp.Err = err
